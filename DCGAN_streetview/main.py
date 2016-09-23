@@ -6,7 +6,7 @@ from utils import pp, visualize, to_json
 import tensorflow as tf
 
 flags = tf.app.flags
-flags.DEFINE_integer("epoch", 25, "Epoch to train [25]")
+flags.DEFINE_integer("epoch", 100, "Epoch to train [25]")
 flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
 flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_integer("train_size", np.inf, "The size of train images [np.inf]")
@@ -20,7 +20,8 @@ flags.DEFINE_integer("output_size_w", 512, "The size of the output images to pro
 flags.DEFINE_boolean("is_crop", False, "True for training, False for testing [False]")
 
 flags.DEFINE_string("dataset", "cityscapes", "The name of dataset [cityscapes, celebA, mnist, lsun]")
-flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoint]")
+# change ckt point
+flags.DEFINE_string("checkpoint_dir", "/home/andy/checkpoint/DCGAN", "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
 flags.DEFINE_boolean("is_train", False, "True for training, False for testing [False]")
 flags.DEFINE_boolean("visualize", False, "True for visualizing, False for nothing [False]")
