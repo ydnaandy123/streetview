@@ -84,12 +84,14 @@ class DCGAN(object):
         else:
             # G: generating image
             self.G = self.generator(self.z)
-            self.sampler = self.sampler(self.z)
             # D: sigmoid, D_logits: d_h3_lin
             # D: real, D_: fake
             # The logit function is the inverse of the sigmoidal "logistic" function
             self.D, self.D_logits = self.discriminator(self.images)
             self.D_, self.D_logits_ = self.discriminator(self.G, reuse=True)
+
+            ## wowowoow why can't this move above on D???
+            self.sampler = self.sampler(self.z)
 
 
         self.z_sum = tf.histogram_summary("z", self.z)
@@ -141,7 +143,7 @@ class DCGAN(object):
 
         elif config.dataset == 'inria':
             print ('Select the INRIAPerson!!!')
-            data_set_dir = "/home/andy/dataset/INRIAPerson/train_64x128_H96/pos"
+            data_set_dir = "/home/andy/dataset/INRIAPerson/96X160H96/Train/pos"
             data = glob(os.path.join(data_set_dir, "*.png"))
             batch_idxs = min(len(data), config.train_size) // config.batch_size
             np.random.shuffle(data)  # help or not?

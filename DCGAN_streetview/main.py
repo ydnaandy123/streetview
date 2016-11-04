@@ -50,7 +50,7 @@ def main(_):
                     dataset_name=FLAGS.dataset, is_crop=False, checkpoint_dir=FLAGS.checkpoint_dir)
         elif FLAGS.dataset == 'inria':
             print 'Select INRIAPerson'
-            dcgan = DCGAN(sess, batch_size=16, output_size_h=128, output_size_w=64, c_dim=3,
+            dcgan = DCGAN(sess, batch_size=16, output_size_h=160, output_size_w=96, c_dim=3,
                     dataset_name=FLAGS.dataset, is_crop=False, checkpoint_dir=FLAGS.checkpoint_dir)
         else:
             dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size, output_size=FLAGS.output_size, c_dim=FLAGS.c_dim,
