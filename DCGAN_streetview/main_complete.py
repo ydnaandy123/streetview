@@ -46,8 +46,8 @@ def main(_):
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.35)
     #sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) 
     
-    #with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-    with tf.Session() as sess:
+    with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+    #with tf.Session() as sess:
         if FLAGS.dataset == 'mnist':
             dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size, y_dim=10, output_size=28, c_dim=1,
                     dataset_name=FLAGS.dataset, is_crop=FLAGS.is_crop, checkpoint_dir=FLAGS.checkpoint_dir)

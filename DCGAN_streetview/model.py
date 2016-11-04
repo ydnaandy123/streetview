@@ -295,13 +295,18 @@ class DCGAN(object):
 
         tf.initialize_all_variables().run()
 
+        if self.load(self.checkpoint_dir):
+            print(" [*] Load SUCCESS")
+        else:
+            print(" [!] Load failed...")
+
         samples, d_loss, g_loss = self.sess.run(
             [self.sampler, self.d_loss, self.g_loss],
             feed_dict={self.z: sample_z, self.images: sample_images}
         )
 
         save_images(samples, [4, 4],
-                    './test/test.png')
+                    './test/' + 'yo' + '.png')
 
     def complete(self, config):
         os.makedirs(os.path.join(config.outDir, 'hats_imgs'), exist_ok=True)
