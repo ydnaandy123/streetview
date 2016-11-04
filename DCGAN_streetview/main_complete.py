@@ -19,6 +19,8 @@ flags.DEFINE_integer("output_size_w", 512, "The size of the output images to pro
 
 # completion
 flags.DEFINE_float("lam", 0.1, "hyper-parameter that controls how import two loss [0.1]")
+flags.DEFINE_string("outDir", "completions", "Directory name to save the output [completions]")
+flags.DEFINE_string("maskType", "center", "type of mask [center]")
 
 # almost not use in my application(or be replaced)
 flags.DEFINE_integer("output_size", 256, "The size of the output images to produce [64]")
@@ -44,7 +46,8 @@ def main(_):
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.35)
     #sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) 
     
-    with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+    #with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+    with tf.Session() as sess:
         if FLAGS.dataset == 'mnist':
             dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size, y_dim=10, output_size=28, c_dim=1,
                     dataset_name=FLAGS.dataset, is_crop=FLAGS.is_crop, checkpoint_dir=FLAGS.checkpoint_dir)
