@@ -209,6 +209,7 @@ class DCGAN(object):
                     batch = [get_image_without_crop(batch_file, is_grayscale = self.is_grayscale)
                              for batch_file in batch_files]
                     batch_images = np.array(batch).astype(np.float32)
+                    batch_images = batch_images[:, :, :, 0:3]
                     # Update D network
                     _, summary_str = self.sess.run([d_optim, self.d_sum],
                         feed_dict={ self.images: batch_images, self.z: batch_z })
