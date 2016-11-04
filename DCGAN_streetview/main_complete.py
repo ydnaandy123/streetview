@@ -14,16 +14,20 @@ flags.DEFINE_integer("c_dim", 3, "Dimension of image color. [3]")
 
 flags.DEFINE_string("dataset", "cityscapes", "The name of dataset [cityscapes, inria, celebA, mnist, lsun]")
 flags.DEFINE_integer("batch_size", 16, "The size of batch images [16]")
-flags.DEFINE_integer("output_size", 256, "The size of the output images to produce [64]")
 flags.DEFINE_integer("output_size_h", 256, "The size of the output images to produce [256]")
 flags.DEFINE_integer("output_size_w", 512, "The size of the output images to produce [512]")
 
+# completion
+flags.DEFINE_float("lam", 0.1, "hyper-parameter that controls how import two loss [0.1]")
+
+# almost not use in my application(or be replaced)
+flags.DEFINE_integer("output_size", 256, "The size of the output images to produce [64]")
 flags.DEFINE_integer("image_size", 256, "The size of image to use (will be center cropped) [108]")
 flags.DEFINE_boolean("is_crop", False, "True for training, False for testing [False]")
 
 # change ckt point
 flags.DEFINE_string("checkpoint_dir", "/home/andy/checkpoint/DCGAN", "Directory name to save the checkpoints [checkpoint]")
-flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
+flags.DEFINE_string("sample_dir", "complete/samples", "Directory name to save the image samples [samples]")
 flags.DEFINE_boolean("is_train", False, "True for training, False for testing [False]")
 flags.DEFINE_boolean("visualize", False, "True for visualizing, False for nothing [False]")
 FLAGS = flags.FLAGS
@@ -59,18 +63,7 @@ def main(_):
         if FLAGS.is_train:
             dcgan.train(FLAGS)
         else:
-            dcgan.load(FLAGS.checkpoint_dir)
-
-        if FLAGS.visualize:
-            to_json("./web/js/layers.js", [dcgan.h0_w, dcgan.h0_b, dcgan.g_bn0],
-                                          [dcgan.h1_w, dcgan.h1_b, dcgan.g_bn1],
-                                          [dcgan.h2_w, dcgan.h2_b, dcgan.g_bn2],
-                                          [dcgan.h3_w, dcgan.h3_b, dcgan.g_bn3],
-                                          [dcgan.h4_w, dcgan.h4_b, None])
-
-            # Below is codes for visualization
-            OPTION = 2
-            visualize(sess, dcgan, FLAGS, OPTION)
+            dcgan.test(FLAGS)
 
 if __name__ == '__main__':
     tf.app.run()

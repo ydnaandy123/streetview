@@ -10,10 +10,10 @@ from utils import *
 
 class DCGAN(object):
     def __init__(self, sess,
-                 batch_size=64, image_size=256, output_size=256, is_crop=False,
-                 output_size_h=256, output_size_w=512,
+                 batch_size=64, output_size_h=256, output_size_w=512, lam=0.1,
                  z_dim=100, gf_dim=128, df_dim=64, gfc_dim=1024, dfc_dim=1024,
-                 y_dim=None, c_dim=3, dataset_name='default', checkpoint_dir=None):
+                 y_dim=None, c_dim=3, image_size=256, output_size=256, is_crop=False,
+                 dataset_name='default', checkpoint_dir=None):
         # The origin paper gf_dim should be 128
         """
 
@@ -33,7 +33,6 @@ class DCGAN(object):
         self.sess = sess
         self.batch_size = batch_size
         self.sample_size = batch_size  # This variable name need to clarify.
-        self.output_size = output_size # This not use any more. Since the width and height may not equal.
         self.output_size_h = output_size_h
         self.output_size_w = output_size_w
 
@@ -41,13 +40,16 @@ class DCGAN(object):
         self.z_dim = z_dim
         self.gf_dim = gf_dim
         self.df_dim = df_dim
-        self.gfc_dim = gfc_dim # we not use it.
-        self.dfc_dim = dfc_dim # we not use it.
+        self.gfc_dim = gfc_dim # we don't use it.
+        self.dfc_dim = dfc_dim # we don't use it.
 
         self.image_size = image_size # Doesn't matter, the input image is already cropped so the size is equal to out put size.
+        self.output_size = output_size  # This not use any more. Since the width and height may not equal.
         self.is_crop = is_crop # False because we already cropped it.
         self.is_grayscale = (c_dim == 1)
         self.c_dim = c_dim
+
+        self.lam = lam
 
         # batch normalization : deals with poor initialization helps gradient flow
         # one of amazing part of this work
@@ -117,6 +119,15 @@ class DCGAN(object):
         self.g_vars = [var for var in t_vars if 'g_' in var.name]
 
         self.saver = tf.train.Saver()
+
+        # Completion.
+        self.mask = tf.placeholder(tf.float32, [None] + [self.output_size_h, self.output_size_w, self.c_dim], name='mask')
+        self.contextual_loss = tf.reduce_sum(
+            tf.contrib.layers.flatten(
+                tf.abs(tf.mul(self.mask, self.G) - tf.mul(self.mask, self.images))), 1)
+        self.perceptual_loss = self.g_loss
+        self.complete_loss = self.contextual_loss + self.lam * self.perceptual_loss
+        self.grad_complete_loss = tf.gradients(self.complete_loss, self.z)
 
     def train(self, config):
         """Train DCGAN"""
@@ -257,6 +268,127 @@ class DCGAN(object):
 
                 if np.mod(counter, 500) == 2:
                     self.save(config.checkpoint_dir, counter)
+
+    def test(self, config):
+        if config.dataset == 'cityscapes':
+            print ('Test the CITYSCAPES!!!')
+            CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
+            data = glob(os.path.join(CITYSCAPES_dir, "*.png"))
+            np.random.shuffle(data)  # help or not?
+
+            sample_files = data[0:self.sample_size]
+            sample = [get_image_without_crop(sample_file, is_grayscale=self.is_grayscale) for sample_file in sample_files]
+            sample_images = np.array(sample).astype(np.float32)
+
+        elif config.dataset == 'inria':
+            print ('Select the INRIAPerson!!!')
+            data_set_dir = "/home/andy/dataset/INRIAPerson/96X160H96/Train/pos"
+            data = glob(os.path.join(data_set_dir, "*.png"))
+            np.random.shuffle(data)  # help or not?
+
+            sample_files = data[0:self.sample_size]
+            sample = [get_image_without_crop(sample_file, is_grayscale=self.is_grayscale)
+                      for sample_file in sample_files]
+            sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
+
+        sample_z = np.random.uniform(-1, 1, size=(self.sample_size, self.z_dim))
+
+        samples, d_loss, g_loss = self.sess.run(
+            [self.sampler, self.d_loss, self.g_loss],
+            feed_dict={self.z: sample_z, self.images: sample_images}
+        )
+
+        save_images(samples, [4, 4],
+                    './test/test.png')
+
+    def complete(self, config):
+        os.makedirs(os.path.join(config.outDir, 'hats_imgs'), exist_ok=True)
+        os.makedirs(os.path.join(config.outDir, 'completed'), exist_ok=True)
+
+        tf.initialize_all_variables().run()
+
+        isLoaded = self.load(self.checkpoint_dir)
+        assert(isLoaded)
+
+        # data = glob(os.path.join(config.dataset, "*.png"))
+        nImgs = len(config.imgs)
+
+        batch_idxs = int(np.ceil(nImgs/self.batch_size))
+        if config.maskType == 'random':
+            fraction_masked = 0.2
+            mask = np.ones(self.image_shape)
+            mask[np.random.random(self.image_shape[:2]) < fraction_masked] = 0.0
+        elif config.maskType == 'center':
+            scale = 0.25
+            assert(scale <= 0.5)
+            mask = np.ones(self.image_shape)
+            sz = self.image_size
+            l = int(self.image_size*scale)
+            u = int(self.image_size*(1.0-scale))
+            mask[l:u, l:u, :] = 0.0
+        elif config.maskType == 'left':
+            mask = np.ones(self.image_shape)
+            c = self.image_size // 2
+            mask[:,:c,:] = 0.0
+        elif config.maskType == 'full':
+            mask = np.ones(self.image_shape)
+        else:
+            assert(False)
+
+        for idx in xrange(0, batch_idxs):
+            l = idx*self.batch_size
+            u = min((idx+1)*self.batch_size, nImgs)
+            batchSz = u-l
+            batch_files = config.imgs[l:u]
+            batch = [get_image(batch_file, self.image_size, is_crop=self.is_crop)
+                     for batch_file in batch_files]
+            batch_images = np.array(batch).astype(np.float32)
+            if batchSz < self.batch_size:
+                print(batchSz)
+                padSz = ((0, int(self.batch_size-batchSz)), (0,0), (0,0), (0,0))
+                batch_images = np.pad(batch_images, padSz, 'constant')
+                batch_images = batch_images.astype(np.float32)
+
+            batch_mask = np.resize(mask, [self.batch_size] + self.image_shape)
+            zhats = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
+            v = 0
+
+            nRows = np.ceil(batchSz/8)
+            nCols = 8
+            save_images(batch_images[:batchSz,:,:,:], [nRows,nCols],
+                        os.path.join(config.outDir, 'before.png'))
+            masked_images = np.multiply(batch_images, batch_mask)
+            save_images(masked_images[:batchSz,:,:,:], [nRows,nCols],
+                        os.path.join(config.outDir, 'masked.png'))
+
+            for i in xrange(config.nIter):
+                fd = {
+                    self.z: zhats,
+                    self.mask: batch_mask,
+                    self.images: batch_images,
+                }
+                run = [self.complete_loss, self.grad_complete_loss, self.G]
+                loss, g, G_imgs = self.sess.run(run, feed_dict=fd)
+
+                v_prev = np.copy(v)
+                v = config.momentum*v - config.lr*g[0]
+                zhats += -config.momentum * v_prev + (1+config.momentum)*v
+                zhats = np.clip(zhats, -1, 1)
+
+                if i % 50 == 0:
+                    print(i, np.mean(loss[0:batchSz]))
+                    imgName = os.path.join(config.outDir,
+                                           'hats_imgs/{:04d}.png'.format(i))
+                    nRows = np.ceil(batchSz/8)
+                    nCols = 8
+                    save_images(G_imgs[:batchSz,:,:,:], [nRows,nCols], imgName)
+
+                    inv_masked_hat_images = np.multiply(G_imgs, 1.0-batch_mask)
+                    completeed = masked_images + inv_masked_hat_images
+                    imgName = os.path.join(config.outDir,
+                                           'completed/{:04d}.png'.format(i))
+                    save_images(completeed[:batchSz,:,:,:], [nRows,nCols], imgName)
+
 
     def discriminator(self, image, y=None, reuse=False):
         if reuse:
