@@ -12,14 +12,15 @@ flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_integer("train_size", np.inf, "The size of train images [np.inf]")
 flags.DEFINE_integer("c_dim", 3, "Dimension of image color. [3]")
 
-flags.DEFINE_integer("batch_size", 16, "The size of batch images [64]")
-flags.DEFINE_integer("image_size", 256, "The size of image to use (will be center cropped) [108]")
+flags.DEFINE_string("dataset", "cityscapes", "The name of dataset [cityscapes, inria, celebA, mnist, lsun]")
+flags.DEFINE_integer("batch_size", 16, "The size of batch images [16]")
 flags.DEFINE_integer("output_size", 256, "The size of the output images to produce [64]")
 flags.DEFINE_integer("output_size_h", 256, "The size of the output images to produce [256]")
 flags.DEFINE_integer("output_size_w", 512, "The size of the output images to produce [512]")
+
+flags.DEFINE_integer("image_size", 256, "The size of image to use (will be center cropped) [108]")
 flags.DEFINE_boolean("is_crop", False, "True for training, False for testing [False]")
 
-flags.DEFINE_string("dataset", "cityscapes", "The name of dataset [cityscapes, celebA, mnist, lsun]")
 # change ckt point
 flags.DEFINE_string("checkpoint_dir", "/home/andy/checkpoint/DCGAN", "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
@@ -46,7 +47,11 @@ def main(_):
         elif FLAGS.dataset == 'cityscapes':    
             print 'Select CITYSCAPSE'                
             dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size, output_size=FLAGS.output_size, c_dim=FLAGS.c_dim,
-                    dataset_name=FLAGS.dataset, is_crop=FLAGS.is_crop, checkpoint_dir=FLAGS.checkpoint_dir)
+                    dataset_name=FLAGS.dataset, is_crop=False, checkpoint_dir=FLAGS.checkpoint_dir)
+        elif FLAGS.dataset == 'inria':
+            print 'Select INRIAPerson'
+            dcgan = DCGAN(sess, batch_size=16, output_size_h=128, output_size_w=64, c_dim=3,
+                    dataset_name=FLAGS.dataset, is_crop=False, checkpoint_dir=FLAGS.checkpoint_dir)
         else:
             dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size, output_size=FLAGS.output_size, c_dim=FLAGS.c_dim,
                     dataset_name=FLAGS.dataset, is_crop=FLAGS.is_crop, checkpoint_dir=FLAGS.checkpoint_dir)

@@ -32,9 +32,8 @@ class DCGAN(object):
         """
         self.sess = sess
         self.batch_size = batch_size
-        self.sample_size = batch_size  # this variable name need to clarify.
-        self.image_size = image_size # doesn't matter, the input image is already cropped so the size is equal to out put size.
-        self.output_size = output_size
+        self.sample_size = batch_size  # This variable name need to clarify.
+        self.output_size = output_size # This not use any more. Since the width and height may not equal.
         self.output_size_h = output_size_h
         self.output_size_w = output_size_w
 
@@ -45,6 +44,7 @@ class DCGAN(object):
         self.gfc_dim = gfc_dim # we not use it.
         self.dfc_dim = dfc_dim # we not use it.
 
+        self.image_size = image_size # Doesn't matter, the input image is already cropped so the size is equal to out put size.
         self.is_crop = is_crop # False because we already cropped it.
         self.is_grayscale = (c_dim == 1)
         self.c_dim = c_dim
@@ -71,7 +71,7 @@ class DCGAN(object):
     def build_model(self):
 
         self.images = tf.placeholder(tf.float32, [self.batch_size] + [self.output_size_h, self.output_size_w, self.c_dim], name='real_images')
-        self.sample_images= tf.placeholder(tf.float32, [self.sample_size] + [self.output_size_h, self.output_size_w, self.c_dim], name='sample_images')
+        self.sample_images = tf.placeholder(tf.float32, [self.sample_size] + [self.output_size_h, self.output_size_w, self.c_dim], name='sample_images')
         self.z = tf.placeholder(tf.float32, [None, self.z_dim], name='z')
 
         if self.y_dim:
@@ -84,14 +84,13 @@ class DCGAN(object):
         else:
             # G: generating image
             self.G = self.generator(self.z)
+            self.sampler = self.sampler(self.z)
             # D: sigmoid, D_logits: d_h3_lin
             # D: real, D_: fake
             # The logit function is the inverse of the sigmoidal "logistic" function
             self.D, self.D_logits = self.discriminator(self.images)
             self.D_, self.D_logits_ = self.discriminator(self.G, reuse=True)
 
-            self.sampler = self.sampler(self.z)
-        
 
         self.z_sum = tf.histogram_summary("z", self.z)
         self.d_sum = tf.histogram_summary("d", self.D)
@@ -100,14 +99,14 @@ class DCGAN(object):
 
         self.d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits, tf.ones_like(self.D)))
         self.d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits_, tf.zeros_like(self.D_)))
-        self.g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits_, tf.ones_like(self.D_)))
-
         self.d_loss_real_sum = tf.scalar_summary("d_loss_real", self.d_loss_real)
         self.d_loss_fake_sum = tf.scalar_summary("d_loss_fake", self.d_loss_fake)
         self.d_loss = self.d_loss_real + self.d_loss_fake
 
-        self.g_loss_sum = tf.scalar_summary("g_loss", self.g_loss)
+        self.g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits_, tf.ones_like(self.D_)))
+
         self.d_loss_sum = tf.scalar_summary("d_loss", self.d_loss)
+        self.g_loss_sum = tf.scalar_summary("g_loss", self.g_loss)
 
         t_vars = tf.trainable_variables()
 
@@ -124,7 +123,8 @@ class DCGAN(object):
             sample_images = data_X[0:self.sample_size]
             sample_labels = data_y[0:self.sample_size]
             batch_idxs = min(len(data_X), config.train_size) // config.batch_size
-        else:
+
+        elif config.dataset == 'cityscapes':
             print ('Select the CITYSCAPES!!!')
             CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
             data = glob(os.path.join(CITYSCAPES_dir, "*.png"))
@@ -138,6 +138,18 @@ class DCGAN(object):
                 sample_images = np.array(sample).astype(np.float32)[:, :, :, None]
             else:
                 sample_images = np.array(sample).astype(np.float32)
+
+        elif config.dataset == 'inria':
+            print ('Select the INRIAPerson!!!')
+            data_set_dir = "/home/andy/dataset/INRIAPerson/train_64x128_H96/pos"
+            data = glob(os.path.join(data_set_dir, "*.png"))
+            batch_idxs = min(len(data), config.train_size) // config.batch_size
+            np.random.shuffle(data)  # help or not?
+
+            sample_files = data[0:self.sample_size]
+            sample = [get_image_without_crop(sample_file, is_grayscale=self.is_grayscale)
+                      for sample_file in sample_files]
+            sample_images = np.array(sample).astype(np.float32)
 
         sample_z = np.random.uniform(-1, 1, size=(self.sample_size, self.z_dim))
 
@@ -192,13 +204,9 @@ class DCGAN(object):
                 else:
                     batch_files = data[idx*config.batch_size:(idx+1)*config.batch_size]
                     #batch = [get_image(batch_file, self.image_size, is_crop=self.is_crop, resize_w=self.output_size, is_grayscale = self.is_grayscale) for batch_file in batch_files]
-                    batch = [get_image_without_crop(batch_file, is_grayscale = self.is_grayscale) for batch_file in batch_files]
+                    batch = [get_image_without_crop(batch_file, is_grayscale = self.is_grayscale)
+                             for batch_file in batch_files]
                     batch_images = np.array(batch).astype(np.float32)
-                    # Update D network
-                    _, summary_str = self.sess.run([d_optim, self.d_sum],
-                        feed_dict={ self.images: batch_images, self.z: batch_z })
-                    self.writer.add_summary(summary_str, counter)
-
                     # Update D network
                     _, summary_str = self.sess.run([d_optim, self.d_sum],
                         feed_dict={ self.images: batch_images, self.z: batch_z })
