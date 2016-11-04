@@ -151,7 +151,7 @@ class DCGAN(object):
             sample_files = data[0:self.sample_size]
             sample = [get_image_without_crop(sample_file, is_grayscale=self.is_grayscale)
                       for sample_file in sample_files]
-            sample_images = np.array(sample).astype(np.float32)
+            sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
 
         sample_z = np.random.uniform(-1, 1, size=(self.sample_size, self.z_dim))
 
