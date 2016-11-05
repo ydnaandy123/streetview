@@ -30,6 +30,8 @@ class DCGAN(object):
             c_dim: (optional) Dimension of image color. For grayscale input, set to 1. [3]
             is_crop: True if images need extra process to crop them.
         """
+        # TODO Can sample_size different from batch_size?
+        # http://stackoverflow.com/questions/35289773/cannot-convert-a-partially-converted-tensor-in-tensorflow
         self.sess = sess
         self.batch_size = batch_size
         self.sample_size = batch_size  # This variable name need to clarify.
@@ -37,7 +39,6 @@ class DCGAN(object):
         self.output_size_w = output_size_w
         self.c_dim = c_dim
         self.image_shape = [output_size_h, output_size_w, c_dim]
-
 
         self.y_dim = y_dim
         self.z_dim = z_dim
@@ -142,7 +143,6 @@ class DCGAN(object):
             batch_idxs = min(len(data_X), config.train_size) // config.batch_size
 
         elif config.dataset == 'cityscapes':
-            print ('Select the CITYSCAPES!!!')
             CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
             data = glob(os.path.join(CITYSCAPES_dir, "*.png"))
             batch_idxs = min(len(data), config.train_size) // config.batch_size
@@ -157,7 +157,6 @@ class DCGAN(object):
                 sample_images = np.array(sample).astype(np.float32)
 
         elif config.dataset == 'inria':
-            print ('Select the INRIAPerson!!!')
             data_set_dir = "/home/andy/dataset/INRIAPerson/96X160H96/Train/pos"
             data = glob(os.path.join(data_set_dir, "*.png"))
             batch_idxs = min(len(data), config.train_size) // config.batch_size
@@ -225,6 +224,7 @@ class DCGAN(object):
                              for batch_file in batch_files]
                     batch_images = np.array(batch).astype(np.float32)
                     batch_images = batch_images[:, :, :, 0:3]
+                    # TODO Give INRIA a a try 1D3G
                     # Update D network
                     _, summary_str = self.sess.run([d_optim, self.d_sum],
                         feed_dict={ self.images: batch_images, self.z: batch_z })
@@ -314,16 +314,16 @@ class DCGAN(object):
             store_dir, '{}_{:d}_{:d}_{:d}.png'.format(config.dataset, config.batch_size, config.output_size_h, config.output_size_w)))
 
     def complete(self, config):
-        if not os.path.exists(os.path.join(config.outDir, 'hats_imgs')):
-            os.makedirs(os.path.join(config.outDir, 'hats_imgs'))
-        if not os.path.exists(os.path.join(config.outDir, 'completed')):
-            os.makedirs(os.path.join(config.outDir, 'completed'))
+        if not os.path.exists(config.outDir):
+            os.makedirs(config.outDir)
 
         tf.initialize_all_variables().run()
 
         isLoaded = self.load(self.checkpoint_dir)
         assert(isLoaded)
 
+        # TODO SPECIFY MASK
+        # TODO FCN
         if config.maskType == 'random':
             fraction_masked = 0.2
             mask = np.ones(self.image_shape)
@@ -332,52 +332,42 @@ class DCGAN(object):
             scale = 0.25
             assert(scale <= 0.5)
             mask = np.ones(self.image_shape)
-            sz = self.image_size
-            l = int(self.image_size*scale)
-            u = int(self.image_size*(1.0-scale))
-            mask[l:u, l:u, :] = 0.0
+            sw, sh = self.output_size_w, self.output_size_h
+            l, d = int(sw*scale), int(sh*scale)
+            r, u = int(sw*(1.0-scale)), int(sh*(1.0-scale))
+            mask[d:u, l:r, :] = 0.0
         else:
             assert(False)
 
-        # TODO batch..
         if config.dataset == 'inria':
             print ('Select the INRIAPerson!!!')
             data_set_dir = "/home/andy/dataset/INRIAPerson/96X160H96/Train/pos"
             data = glob(os.path.join(data_set_dir, "*.png"))
             batch_idxs = min(len(data), config.train_size) // config.batch_size
-            np.random.shuffle(data)  # help or not?
-
-        nImgs = len(data)
+            np.random.shuffle(data)
 
         for idx in xrange(0, batch_idxs):
-            l = idx*self.batch_size
-            u = min((idx+1)*self.batch_size, nImgs)
-            batchSz = u-l
-            batch_files = data[l:u]
+            if not os.path.exists(os.path.join(config.outDir, str(idx), 'hats_imgs')):
+                os.makedirs(os.path.join(config.outDir, str(idx), 'hats_imgs'))
+            if not os.path.exists(os.path.join(config.outDir, str(idx), 'completed')):
+                os.makedirs(os.path.join(config.outDir, str(idx), 'completed'))
+
+            batch_files = data[idx * config.batch_size:(idx + 1) * config.batch_size]
             batch = [get_image_without_crop(batch_file, is_grayscale=self.is_grayscale)
                      for batch_file in batch_files]
-            batch_images = np.array(batch).astype(np.float32)
-            batch_images = batch_images[:, :, :, 0:3]
-            if batchSz < self.batch_size:
-                #TODO WHY GO HERE?
-                print('should not come here')
-                print(batchSz)
-                padSz = ((0, int(self.batch_size-batchSz)), (0,0), (0,0), (0,0))
-                batch_images = np.pad(batch_images, padSz, 'constant')
-                batch_images = batch_images.astype(np.float32)
+            batch_images = np.array(batch).astype(np.float32)[:, :, :, 0:3]
 
             batch_mask = np.resize(mask, [self.batch_size] + self.image_shape)
             zhats = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
             v = 0
 
-            nRows = np.ceil(batchSz/8)
+            nRows = np.ceil(config.batch_size/8)
             nCols = 8
-            save_images(batch_images[:batchSz,:,:,:], [nRows,nCols],
-                        os.path.join(config.outDir, 'before.png'))
+            save_images(batch_images, [nRows,nCols],
+                        os.path.join(config.outDir, '{}_before.png'.format(idx)))
             masked_images = np.multiply(batch_images, batch_mask)
-            save_images(masked_images[:batchSz,:,:,:], [nRows,nCols],
-                        os.path.join(config.outDir, 'masked.png'))
-
+            save_images(masked_images, [nRows,nCols],
+                        os.path.join(config.outDir, '{}_masked.png'.format(idx)))
 
             for i in xrange(config.nIter):
                 fd = {
@@ -393,19 +383,19 @@ class DCGAN(object):
                 zhats += -config.momentum * v_prev + (1+config.momentum)*v
                 zhats = np.clip(zhats, -1, 1)
 
-                if i % 50 == 0:
-                    print(i, np.mean(loss[0:batchSz]))
-                    imgName = os.path.join(config.outDir,
+                if i % 200 == 0:
+                    print(i, np.mean(loss))
+                    imgName = os.path.join(config.outDir, str(idx),
                                            'hats_imgs/{:04d}.png'.format(i))
-                    nRows = np.ceil(batchSz/8)
+                    nRows = np.ceil(config.batch_size/8)
                     nCols = 8
-                    save_images(G_imgs[:batchSz,:,:,:], [nRows,nCols], imgName)
+                    save_images(G_imgs, [nRows,nCols], imgName)
 
                     inv_masked_hat_images = np.multiply(G_imgs, 1.0-batch_mask)
                     completeed = masked_images + inv_masked_hat_images
-                    imgName = os.path.join(config.outDir,
+                    imgName = os.path.join(config.outDir, str(idx),
                                            'completed/{:04d}.png'.format(i))
-                    save_images(completeed[:batchSz,:,:,:], [nRows,nCols], imgName)
+                    save_images(completeed, [nRows,nCols], imgName)
 
 
     def discriminator(self, image, y=None, reuse=False):
