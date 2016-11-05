@@ -9,8 +9,6 @@ import numpy as np
 
 data = [1, 2, 3, 4, 5]
 
-print data
-
-print np.random.shuffle(data)
-
-print data
+print data + [10, 12]
+epoch = 10
+print('123{:d}'.format(epoch))

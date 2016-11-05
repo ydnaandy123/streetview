@@ -35,20 +35,24 @@ class DCGAN(object):
         self.sample_size = batch_size  # This variable name need to clarify.
         self.output_size_h = output_size_h
         self.output_size_w = output_size_w
+        self.c_dim = c_dim
+        self.image_shape = [output_size_h, output_size_w, c_dim]
+
 
         self.y_dim = y_dim
         self.z_dim = z_dim
         self.gf_dim = gf_dim
         self.df_dim = df_dim
+
+        # This block isn't used in my application
         self.gfc_dim = gfc_dim # we don't use it.
         self.dfc_dim = dfc_dim # we don't use it.
-
         self.image_size = image_size # Doesn't matter, the input image is already cropped so the size is equal to out put size.
         self.output_size = output_size  # This not use any more. Since the width and height may not equal.
         self.is_crop = is_crop # False because we already cropped it.
         self.is_grayscale = (c_dim == 1)
-        self.c_dim = c_dim
 
+        # For completion
         self.lam = lam
 
         # batch normalization : deals with poor initialization helps gradient flow
@@ -72,8 +76,8 @@ class DCGAN(object):
 
     def build_model(self):
 
-        self.images = tf.placeholder(tf.float32, [self.batch_size] + [self.output_size_h, self.output_size_w, self.c_dim], name='real_images')
-        self.sample_images = tf.placeholder(tf.float32, [self.sample_size] + [self.output_size_h, self.output_size_w, self.c_dim], name='sample_images')
+        self.images = tf.placeholder(tf.float32, [self.batch_size] + self.image_shape, name='real_images')
+        self.sample_images = tf.placeholder(tf.float32, [self.sample_size] + self.image_shape, name='sample_images')
         self.z = tf.placeholder(tf.float32, [None, self.z_dim], name='z')
 
         if self.y_dim:
@@ -121,7 +125,7 @@ class DCGAN(object):
         self.saver = tf.train.Saver()
 
         # Completion.
-        self.mask = tf.placeholder(tf.float32, [None] + [self.output_size_h, self.output_size_w, self.c_dim], name='mask')
+        self.mask = tf.placeholder(tf.float32, [None] + self.image_shape, name='mask')
         self.contextual_loss = tf.reduce_sum(
             tf.contrib.layers.flatten(
                 tf.abs(tf.mul(self.mask, self.G) - tf.mul(self.mask, self.images))), 1)
@@ -271,7 +275,6 @@ class DCGAN(object):
 
     def test(self, config):
         if config.dataset == 'cityscapes':
-            print ('Test the CITYSCAPES!!!')
             CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
             data = glob(os.path.join(CITYSCAPES_dir, "*.png"))
             np.random.shuffle(data)  # help or not?
@@ -281,7 +284,6 @@ class DCGAN(object):
             sample_images = np.array(sample).astype(np.float32)
 
         elif config.dataset == 'inria':
-            print ('Select the INRIAPerson!!!')
             data_set_dir = "/home/andy/dataset/INRIAPerson/96X160H96/Train/pos"
             data = glob(os.path.join(data_set_dir, "*.png"))
             np.random.shuffle(data)  # help or not?
@@ -305,22 +307,23 @@ class DCGAN(object):
             feed_dict={self.z: sample_z, self.images: sample_images}
         )
 
-        save_images(samples, [4, 4],
-                    './test/' + 'yo' + '.png')
+        store_dir = './test'
+        if not os.path.exists(store_dir):
+            os.makedirs(store_dir)
+        save_images(samples, [4, 4], os.path.join(
+            store_dir, '{}_{:d}_{:d}_{:d}.png'.format(config.dataset, config.batch_size, config.output_size_h, config.output_size_w)))
 
     def complete(self, config):
-        os.makedirs(os.path.join(config.outDir, 'hats_imgs'), exist_ok=True)
-        os.makedirs(os.path.join(config.outDir, 'completed'), exist_ok=True)
+        if not os.path.exists(os.path.join(config.outDir, 'hats_imgs')):
+            os.makedirs(os.path.join(config.outDir, 'hats_imgs'))
+        if not os.path.exists(os.path.join(config.outDir, 'completed')):
+            os.makedirs(os.path.join(config.outDir, 'completed'))
 
         tf.initialize_all_variables().run()
 
         isLoaded = self.load(self.checkpoint_dir)
         assert(isLoaded)
 
-        # data = glob(os.path.join(config.dataset, "*.png"))
-        nImgs = len(config.imgs)
-
-        batch_idxs = int(np.ceil(nImgs/self.batch_size))
         if config.maskType == 'random':
             fraction_masked = 0.2
             mask = np.ones(self.image_shape)
@@ -333,24 +336,31 @@ class DCGAN(object):
             l = int(self.image_size*scale)
             u = int(self.image_size*(1.0-scale))
             mask[l:u, l:u, :] = 0.0
-        elif config.maskType == 'left':
-            mask = np.ones(self.image_shape)
-            c = self.image_size // 2
-            mask[:,:c,:] = 0.0
-        elif config.maskType == 'full':
-            mask = np.ones(self.image_shape)
         else:
             assert(False)
+
+        # TODO batch..
+        if config.dataset == 'inria':
+            print ('Select the INRIAPerson!!!')
+            data_set_dir = "/home/andy/dataset/INRIAPerson/96X160H96/Train/pos"
+            data = glob(os.path.join(data_set_dir, "*.png"))
+            batch_idxs = min(len(data), config.train_size) // config.batch_size
+            np.random.shuffle(data)  # help or not?
+
+        nImgs = len(data)
 
         for idx in xrange(0, batch_idxs):
             l = idx*self.batch_size
             u = min((idx+1)*self.batch_size, nImgs)
             batchSz = u-l
-            batch_files = config.imgs[l:u]
-            batch = [get_image(batch_file, self.image_size, is_crop=self.is_crop)
+            batch_files = data[l:u]
+            batch = [get_image_without_crop(batch_file, is_grayscale=self.is_grayscale)
                      for batch_file in batch_files]
             batch_images = np.array(batch).astype(np.float32)
+            batch_images = batch_images[:, :, :, 0:3]
             if batchSz < self.batch_size:
+                #TODO WHY GO HERE?
+                print('should not come here')
                 print(batchSz)
                 padSz = ((0, int(self.batch_size-batchSz)), (0,0), (0,0), (0,0))
                 batch_images = np.pad(batch_images, padSz, 'constant')
@@ -367,6 +377,7 @@ class DCGAN(object):
             masked_images = np.multiply(batch_images, batch_mask)
             save_images(masked_images[:batchSz,:,:,:], [nRows,nCols],
                         os.path.join(config.outDir, 'masked.png'))
+
 
             for i in xrange(config.nIter):
                 fd = {

@@ -2,10 +2,11 @@
 Automatically generate and complete the streetview
 
 ## DCGAN
-- A example DCGAN generate images given z
+- An example DCGAN generate images given the z
 - Trained on INRIA
 - 2D1G
-![](/src/INRIA_ep0_2_ep99.gif)
+- epoch from 0 to 99
+- ![](/src/INRIA_ep0_2_ep99.gif)
 
 ## Completion
 
