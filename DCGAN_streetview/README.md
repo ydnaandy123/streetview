@@ -11,4 +11,6 @@ Tensorflow implementation of [Deep Convolutional Generative Adversarial Networks
 - How to use 'hats_imgs/{:04d}.png'.format(i)
 - model line:358 won't that cover the old one?
 
+## example
+
 ![](/translate.gif)
