@@ -1,6 +1,8 @@
 # Image Completion with Deep Learning in TensorFlow
 
-![](/completion.compressed.gif)
++ Check the original author [website](https://github.com/bamos/dcgan-completion.tensorflow) for more detailed information.
+
+## Quote
 
 + [See my blog post for more details and usage instructions](http://bamos.github.io/2016/08/09/deep-completion/).
 + This repository implements Raymond Yeh and Chen Chen et al.'s paper
@@ -12,3 +14,7 @@
   My modifications are also [MIT-licensed](./LICENSE).
 + The [./checkpoint](./checkpoint) directory contains a pre-trained
   model for faces used in the blog post.
+
+## Modification
+
+- keep the same, as a reference

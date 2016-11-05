@@ -6,11 +6,12 @@ Tensorflow implementation of [Deep Convolutional Generative Adversarial Networks
 - Taehoon Kim / [@carpedm20](http://carpedm20.github.io/)
 - please refer to the original website for more detailed [carpedm20/DCGAN-tensorflow](https://github.com/carpedm20/DCGAN-tensorflow)
 
+## example
+
+![](/DCGAN_streetview/translate.gif)
+
 ## TODO
 
 - How to use 'hats_imgs/{:04d}.png'.format(i)
 - model line:358 won't that cover the old one?
 
-## example
-
-![](/translate.gif)
