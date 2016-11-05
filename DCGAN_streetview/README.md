@@ -6,9 +6,7 @@ Tensorflow implementation of [Deep Convolutional Generative Adversarial Networks
 - Taehoon Kim / [@carpedm20](http://carpedm20.github.io/)
 - please refer to the original website for more detailed [carpedm20/DCGAN-tensorflow](https://github.com/carpedm20/DCGAN-tensorflow)
 
-## example
 
-![](/DCGAN_streetview/translate.gif)
 
 ## TODO
 
