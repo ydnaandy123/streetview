@@ -32,7 +32,6 @@ Automatically generate and complete the streetview
 ![INRIA_different_batch](src/INRIA_different_batch/INRIA_different_batch.gif)
 - In the completion stage, it tends to choose those z resulting blurry images
 ![blurry](/src/blurry.gif)
-- really make sense, but how to use it?
 - TODO:
   - Inverse mapping to the latent space for GAN
   
