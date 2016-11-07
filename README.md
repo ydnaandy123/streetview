@@ -6,7 +6,9 @@ Automatically generate and complete the streetview
 - Decode the simple(uniform here) distribution p_z to the images(streetview here) distribution p_data
 - How to use: DCGAN_streetview/ main.py --dataset datasetname --mode train
 - ![CITYSCAPES_DCGAN_ep0-38](/src/CITYSCAPES_DCGAN_ep0-38/CITYSCAPES_DCGAN_ep0-38.gif)
-- TODO: [ ]GAN-improved, [ ][ ]VAE
+- TODO: 
+  - [ ]GAN-improved
+  - [ ]VAE
 
 Now we can pick an arbitrary z~p_z and decode it to a image
 
@@ -15,7 +17,8 @@ Now we can pick an arbitrary z~p_z and decode it to a image
 - Pick the z that fits the original image well
 - Minimizing the (Contextual + lamda*Perceptual) loss
 - How to use: DCGAN_streetview/ main.py --dataset datasetname --mode complete
-- TODO: [ ][poisson blending](http://www.ctralie.com/Teaching/PoissonImageEditing/)
+- TODO: 
+  - [ ][poisson blending](http://www.ctralie.com/Teaching/PoissonImageEditing/)
 
 But what's behind it? Can we encode a image to z?
 
