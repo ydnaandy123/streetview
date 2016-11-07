@@ -23,14 +23,20 @@ Automatically generate and complete the streetview
 - TODO: 
   - [poisson blending](http://www.ctralie.com/Teaching/PoissonImageEditing/)
 
-**But what's behind it? Can we encode a image to z?**
+**Can we encode a image to z?**
 
-## Observation
+## Observations
 - related to [Generative Image Modeling using Style and Structure Adversarial Networks](https://arxiv.org/abs/1603.05631)
-- Here is another example which focus on pedestrian. In the early training stage, the network seems to decide the *structures or poses* of pedestrians. Then in the late training stage, it only has subtle changes on *texture* according to the current batch.
-<figure class="third">
-    <img src="src/INRIA_different_batch/train_09_0140.png">
-    <img src="src/INRIA_different_batch/train_10_0089.png">
-</figure>
+- Here is another example which focus on pedestrian. 
+- In the early training stage, the network seems to decide the *structures or poses* of pedestrians. Then in the late training stage, it only has subtle changes on *texture* according to the current batch.
+![INRIA_different_batch](src/INRIA_different_batch)
 - In the completion stage, it tends to choose those z resulting blurry images
+![INRIA_complete_lr](src/INRIA_complete_lr)
 ![blurry](/src/blurry.gif)
+- really make sense, but how to use it?
+- TODO:
+  - Inverse mapping to the latent space for GAN
+  
+## Some thoughts
+- If we can complete the missing part of a image, can we combine one generator(pedestrian) with another discriminator(streetview)?
+![ques](/src/ques.PNG)
