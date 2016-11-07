@@ -17,6 +17,6 @@ Now we can pick an arbitrary z~p_z and decode it to a image
 - Use: DCGAN_streetview/ main.py --dataset datasetname --mode complete
 - TODO: [poisson blending](http://www.ctralie.com/Teaching/PoissonImageEditing/)
 
-But what's behind this? Can we encode a image to z?
+But what's behind it? Can we encode a image to z?
 
 ## 
