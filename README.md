@@ -29,9 +29,8 @@ Automatically generate and complete the streetview
 - related to [Generative Image Modeling using Style and Structure Adversarial Networks](https://arxiv.org/abs/1603.05631)
 - Here is another example which focus on pedestrian. 
 - In the early training stage, the network seems to decide the *structures or poses* of pedestrians. Then in the late training stage, it only has subtle changes on *texture* according to the current batch.
-![INRIA_different_batch](src/INRIA_different_batch)
+![INRIA_different_batch](src/INRIA_different_batch/INRIA_different_batch.gif)
 - In the completion stage, it tends to choose those z resulting blurry images
-![INRIA_complete_lr](src/INRIA_complete_lr)
 ![blurry](/src/blurry.gif)
 - really make sense, but how to use it?
 - TODO:
