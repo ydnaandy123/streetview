@@ -342,9 +342,12 @@ class DCGAN(object):
         if config.dataset == 'inria':
             print ('Select the INRIAPerson!!!')
             data_set_dir = "/home/andy/dataset/INRIAPerson/96X160H96/Train/pos"
-            data = glob(os.path.join(data_set_dir, "*.png"))
-            batch_idxs = min(len(data), config.train_size) // config.batch_size
-            np.random.shuffle(data)
+        elif config.dataset == 'cityscapes':
+            print ('Select the CITYSCAPES!!!')
+            data_set_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
+        data = glob(os.path.join(data_set_dir, "*.png"))
+        batch_idxs = min(len(data), config.train_size) // config.batch_size
+        np.random.shuffle(data)
 
         for idx in xrange(0, batch_idxs):
             if not os.path.exists(os.path.join(config.outDir, str(idx), 'hats_imgs')):
