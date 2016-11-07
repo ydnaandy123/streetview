@@ -3,7 +3,7 @@ Automatically generate and complete the streetview
 
 ## DCGAN
 - [Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks](https://arxiv.org/abs/1511.06434)
-- ![CITYSCAPES_DCGAN_ep0-38](/src/CITYSCAPES_DCGAN_ep0-38/CITYSCAPES_DCGAN_ep0-38.gif)
+![CITYSCAPES_DCGAN_ep0-38](/src/CITYSCAPES_DCGAN_ep0-38/CITYSCAPES_DCGAN_ep0-38.gif)
 - Decode the simple(uniform here) distribution p_z to the images(streetview here) distribution p_data
 - How to use: DCGAN_streetview/ 
   `main.py --dataset datasetname --mode train`
@@ -15,7 +15,7 @@ Automatically generate and complete the streetview
 
 ## Completion
 - [Semantic Image Inpainting with Perceptual and Contextual Losses](https://arxiv.org/abs/1607.07539)
-- ![CITYSCAPES_DCGAN_ep0-38](/src/CITYSCAPES_complete_lr/CITYSCAPES_complete_lr.gif)
+![CITYSCAPES_DCGAN_ep0-38](/src/CITYSCAPES_complete_lr/CITYSCAPES_complete_lr.gif)
 - Pick the z that fits the original image well
 - Minimizing the (Contextual + lamda*Perceptual) loss
 - How to use: DCGAN_streetview/ 
@@ -28,5 +28,5 @@ Automatically generate and complete the streetview
 ## Observation
 - related to [Generative Image Modeling using Style and Structure Adversarial Networks](https://arxiv.org/abs/1603.05631)
 - Here is another example which focus on pedestrian. In the early training stage, the network seems to decide the *structures or poses* of pedestrians. Then in the late training stage, it only has subtle changes on *texture* according to the current batch.
-- ![src/INRIA_ep0_2_ep99.gif]
+- ![INRIA_ep0_2_ep99.gif](src/INRIA_ep0_2_ep99.gif)
 - This is similar to human perception
