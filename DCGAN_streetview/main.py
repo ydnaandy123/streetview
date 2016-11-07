@@ -23,8 +23,8 @@ flags.DEFINE_float("lam", 0.1, "hyper-parameter that controls how import two los
 flags.DEFINE_string("outDir", "completions", "Directory name to save the output [completions]")
 flags.DEFINE_string("maskType", "center", "type of mask [center]")
 flags.DEFINE_integer("nIter", 6000, "The number of iteration [1000]")
-flags.DEFINE_float("lr", 0.001, "WTF [0.01]")
-flags.DEFINE_float("momentum", 0.5, "WTF [0.9]")
+flags.DEFINE_float("lr", 0.01, "WTF [0.01]")
+flags.DEFINE_float("momentum", 0.9, "WTF [0.9]")
 # TODO lr and mometum
 
 # almost not use in my application(or be replaced)

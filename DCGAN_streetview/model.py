@@ -366,10 +366,10 @@ class DCGAN(object):
 
             nRows = np.ceil(config.batch_size/8)
             nCols = 8
-            save_images(batch_images, [nRows,nCols],
+            save_images(batch_images, [4 ,4],
                         os.path.join(config.outDir, '{}_before.png'.format(idx)))
             masked_images = np.multiply(batch_images, batch_mask)
-            save_images(masked_images, [nRows,nCols],
+            save_images(masked_images, [4, 4],
                         os.path.join(config.outDir, '{}_masked.png'.format(idx)))
 
             for i in xrange(config.nIter):
@@ -398,7 +398,7 @@ class DCGAN(object):
                     completeed = masked_images + inv_masked_hat_images
                     imgName = os.path.join(config.outDir, str(idx),
                                            'completed/{:04d}.png'.format(i))
-                    save_images(completeed, [nRows,nCols], imgName)
+                    save_images(completeed, [4, 4], imgName)
 
 
     def discriminator(self, image, y=None, reuse=False):
