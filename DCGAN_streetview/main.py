@@ -15,7 +15,7 @@ flags.DEFINE_integer("c_dim", 3, "Dimension of image color. [3]")
 flags.DEFINE_string("mode", "test", "type of mode [test, train, complete]")
 flags.DEFINE_string("dataset", "cityscapes", "The name of dataset [cityscapes, inria]")
 flags.DEFINE_integer("batch_size", 16, "The size of batch images [16]")
-flags.DEFINE_integer("output_size_h", 200, "The size of the output images to produce [256]")
+flags.DEFINE_integer("output_size_h", 256, "The size of the output images to produce [256]")
 flags.DEFINE_integer("output_size_w", 512, "The size of the output images to produce [512]")
 
 # completion
@@ -63,7 +63,7 @@ def main(_):
                           checkpoint_dir=FLAGS.checkpoint_dir)
         elif FLAGS.dataset == 'cityscapes':
             print 'Select CITYSCAPES'
-            dcgan = DCGAN(sess, batch_size=16, output_size_h=200, output_size_w=512, c_dim=3,
+            dcgan = DCGAN(sess, batch_size=16, output_size_h=192, output_size_w=512, c_dim=3,
                           dataset_name=FLAGS.dataset, is_crop=False, checkpoint_dir=FLAGS.checkpoint_dir)
         elif FLAGS.dataset == 'inria':
             print 'Select INRIAPerson'
