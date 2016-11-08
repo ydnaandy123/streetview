@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 from utils import *
 
 
-#CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/leftImg8bit_trainvaltest/leftImg8bit/train"
+CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/leftImg8bit_trainvaltest/leftImg8bit/train"
 #CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/gtFine_trainvaltest/gtFine/train"
-training_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random_mask"
-mask_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
-trainings = glob(os.path.join(training_dir, "*.png"))
-masks = glob(os.path.join(mask_dir, "*.png"))
+#training_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random_mask"
+#trainings = glob(os.path.join(training_dir, "*.png"))
+#mask_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
+#masks = glob(os.path.join(mask_dir, "*.png"))
 
-
+'''
 for index, filePath in enumerate(trainings):
     print ('%d/%d' % (index, len(trainings)))
     img = scipy.misc.imread(filePath).astype(np.float)
@@ -24,7 +24,7 @@ for index, filePath in enumerate(trainings):
 
     scipy.misc.imsave('/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random_mask/' + filePath.split('/')[-1], mask)
     break
-
+'''
 
 '''
 """
@@ -61,7 +61,13 @@ random crop a image [256, 512]
 in the resize (x0.5) original image [512, 1024]
 """
 
-'''
+data = []
+for folder in os.listdir(CITYSCAPES_dir):
+    #path = os.path.join(CITYSCAPES_dir, folder, "*.png")
+    path = os.path.join(CITYSCAPES_dir, folder, "*.png")
+    data.extend(glob(path))
+
+data_length = len(data)
 # high < 256 because want to cut the bottom
 offs_h = np.random.randint(low=0, high=200, size=data_length)
 offs_h_end = offs_h + 256
@@ -77,9 +83,10 @@ for index, filePath in enumerate(data):
     img = scipy.misc.imresize(img, 0.25, interp='bilinear', mode=None)
     #scipy.misc.imsave('/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random/' + filePath.split('/')[-1],
     #                  img[offs_h[index]:offs_h_end[index], offs_w[index]:offs_w_end[index] :])
-    scipy.misc.imsave('/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random/' + filePath.split('/')[-1], img)
+    scipy.misc.imsave('/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/' + filePath.split('/')[-1], img[0:200, :, :])
+    #break
 
-'''
+
 
 def resize_and_crop(img_path, modified_path, size, crop_type='top'):
     """

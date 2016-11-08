@@ -143,29 +143,21 @@ class DCGAN(object):
             batch_idxs = min(len(data_X), config.train_size) // config.batch_size
 
         elif config.dataset == 'cityscapes':
-            CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
-            data = glob(os.path.join(CITYSCAPES_dir, "*.png"))
+            data_set_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom"
+            data = glob(os.path.join(data_set_dir, "*.png"))
             batch_idxs = min(len(data), config.train_size) // config.batch_size
-            np.random.shuffle(data)  # help or not?
-
-            sample_files = data[0:self.sample_size]
-            #sample = [get_image(sample_file, self.image_size, is_crop=self.is_crop, resize_w=self.output_size, is_grayscale = self.is_grayscale) for sample_file in sample_files]
-            sample = [get_image_without_crop(sample_file, is_grayscale=self.is_grayscale) for sample_file in sample_files]
-            if (self.is_grayscale):
-                sample_images = np.array(sample).astype(np.float32)[:, :, :, None]
-            else:
-                sample_images = np.array(sample).astype(np.float32)
+            np.random.shuffle(data)
 
         elif config.dataset == 'inria':
             data_set_dir = "/home/andy/dataset/INRIAPerson/96X160H96/Train/pos"
             data = glob(os.path.join(data_set_dir, "*.png"))
             batch_idxs = min(len(data), config.train_size) // config.batch_size
-            np.random.shuffle(data)  # help or not?
+            np.random.shuffle(data)
 
-            sample_files = data[0:self.sample_size]
-            sample = [get_image_without_crop(sample_file, is_grayscale=self.is_grayscale)
-                      for sample_file in sample_files]
-            sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
+        sample_files = data[0:self.sample_size]
+        sample = [get_image_without_crop(sample_file, is_grayscale=self.is_grayscale)
+                  for sample_file in sample_files]
+        sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
 
         sample_z = np.random.uniform(-1, 1, size=(self.sample_size, self.z_dim))
         batch_sqrt = np.ceil(np.sqrt(config.batch_size))
@@ -207,46 +199,37 @@ class DCGAN(object):
 
                     # Update G network
                     _, summary_str = self.sess.run([g_optim, self.g_sum],
-                        feed_dict={ self.z: batch_z, self.y:batch_labels })
+                        feed_dict={ self.z: batch_z, self.y: batch_labels })
                     self.writer.add_summary(summary_str, counter)
 
                     # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
                     _, summary_str = self.sess.run([g_optim, self.g_sum],
-                        feed_dict={ self.z: batch_z, self.y:batch_labels })
+                        feed_dict={ self.z: batch_z, self.y: batch_labels })
                     self.writer.add_summary(summary_str, counter)
 
-                    errD_fake = self.d_loss_fake.eval({self.z: batch_z, self.y:batch_labels})
-                    errD_real = self.d_loss_real.eval({self.images: batch_images, self.y:batch_labels})
-                    errG = self.g_loss.eval({self.z: batch_z, self.y:batch_labels})
+                    errD_fake = self.d_loss_fake.eval({self.z: batch_z, self.y: batch_labels})
+                    errD_real = self.d_loss_real.eval({self.images: batch_images, self.y: batch_labels})
+                    errG = self.g_loss.eval({self.z: batch_z, self.y: batch_labels})
                 else:
                     batch_files = data[idx*config.batch_size:(idx+1)*config.batch_size]
-                    #batch = [get_image(batch_file, self.image_size, is_crop=self.is_crop, resize_w=self.output_size, is_grayscale = self.is_grayscale) for batch_file in batch_files]
                     batch = [get_image_without_crop(batch_file, is_grayscale = self.is_grayscale)
                              for batch_file in batch_files]
                     batch_images = np.array(batch).astype(np.float32)
                     batch_images = batch_images[:, :, :, 0:3]
-                    # TODO Give INRIA a a try 1D3G
+                    # TODO How many D and G?
                     # Update D network
                     #_, summary_str = self.sess.run([d_optim, self.d_sum],
                     #    feed_dict={ self.images: batch_images, self.z: batch_z })
                     #self.writer.add_summary(summary_str, counter)
 
                     # Update D network
-                    _, summary_str = self.sess.run([d_optim, self.d_sum],
-                        feed_dict={ self.images: batch_images, self.z: batch_z })
-                    self.writer.add_summary(summary_str, counter)
+                    for i in range(0, 2):
+                        _, summary_str = self.sess.run([d_optim, self.d_sum],
+                            feed_dict={ self.images: batch_images, self.z: batch_z })
+                        self.writer.add_summary(summary_str, counter)
 
                     # Update G network
-                    _, summary_str = self.sess.run([g_optim, self.g_sum],
-                        feed_dict={ self.z: batch_z })
-                    self.writer.add_summary(summary_str, counter)
-
-                    # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
-                    _, summary_str = self.sess.run([g_optim, self.g_sum],
-                        feed_dict={ self.z: batch_z })
-                    self.writer.add_summary(summary_str, counter)
-
-                    # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
+                    for i in range(0, 1)
                     _, summary_str = self.sess.run([g_optim, self.g_sum],
                         feed_dict={ self.z: batch_z })
                     self.writer.add_summary(summary_str, counter)
@@ -281,8 +264,8 @@ class DCGAN(object):
 
     def test(self, config):
         if config.dataset == 'cityscapes':
-            CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
-            data = glob(os.path.join(CITYSCAPES_dir, "*.png"))
+            data_set_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
+            data = glob(os.path.join(data_set_dir, "*.png"))
             np.random.shuffle(data)  # help or not?
 
             sample_files = data[0:self.sample_size]
