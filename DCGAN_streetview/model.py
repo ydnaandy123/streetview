@@ -7,7 +7,7 @@ from six.moves import xrange
 from ops import *
 from utils import *
 
-CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
+CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom"
 INRIA_dir = "/home/andy/dataset/INRIAPerson/96X160H96/Train/pos"
 
 

@@ -42,7 +42,6 @@ FLAGS = flags.FLAGS
 
 
 # TODO Fully cityscape dataset and hacker
-# TODO More general way to represent dataset location
 
 def main(_):
     pp.pprint(flags.FLAGS.__flags)
@@ -53,7 +52,7 @@ def main(_):
         os.makedirs(FLAGS.sample_dir)
 
     # Do not take all memory
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.40)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.60)
     # sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
