@@ -168,6 +168,7 @@ class DCGAN(object):
             sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
 
         sample_z = np.random.uniform(-1, 1, size=(self.sample_size, self.z_dim))
+        batch_sqrt = np.ceil(np.sqrt(config.batch_size))
 
         # Gather the variables for each of the models so they can be trained separately.
         # ADAM is often competitive with SGD and (usually)
@@ -226,9 +227,9 @@ class DCGAN(object):
                     batch_images = batch_images[:, :, :, 0:3]
                     # TODO Give INRIA a a try 1D3G
                     # Update D network
-                    _, summary_str = self.sess.run([d_optim, self.d_sum],
-                        feed_dict={ self.images: batch_images, self.z: batch_z })
-                    self.writer.add_summary(summary_str, counter)
+                    #_, summary_str = self.sess.run([d_optim, self.d_sum],
+                    #    feed_dict={ self.images: batch_images, self.z: batch_z })
+                    #self.writer.add_summary(summary_str, counter)
 
                     # Update D network
                     _, summary_str = self.sess.run([d_optim, self.d_sum],
@@ -241,9 +242,14 @@ class DCGAN(object):
                     self.writer.add_summary(summary_str, counter)
 
                     # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
-                    #_, summary_str = self.sess.run([g_optim, self.g_sum],
-                    #    feed_dict={ self.z: batch_z })
-                    #self.writer.add_summary(summary_str, counter)
+                    _, summary_str = self.sess.run([g_optim, self.g_sum],
+                        feed_dict={ self.z: batch_z })
+                    self.writer.add_summary(summary_str, counter)
+
+                    # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
+                    _, summary_str = self.sess.run([g_optim, self.g_sum],
+                        feed_dict={ self.z: batch_z })
+                    self.writer.add_summary(summary_str, counter)
 
                     errD_fake = self.d_loss_fake.eval({self.z: batch_z})
                     errD_real = self.d_loss_real.eval({self.images: batch_images})
@@ -266,7 +272,7 @@ class DCGAN(object):
                             [self.sampler, self.d_loss, self.g_loss],
                             feed_dict={self.z: sample_z, self.images: sample_images}
                         )
-                    save_images(samples, [4, 4],
+                    save_images(samples, [batch_sqrt, batch_sqrt],
                                 './samples/train_{:02d}_{:04d}.png'.format(epoch, idx))
                     print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss))
 
@@ -310,7 +316,9 @@ class DCGAN(object):
         store_dir = './test'
         if not os.path.exists(store_dir):
             os.makedirs(store_dir)
-        save_images(samples, [4, 4], os.path.join(
+
+        batch_sqrt = np.ceil(np.sqrt(config.batch_size))
+        save_images(samples, [batch_sqrt, batch_sqrt], os.path.join(
             store_dir, '{}_{:d}_{:d}_{:d}.png'.format(config.dataset, config.batch_size, config.output_size_h, config.output_size_w)))
 
     def complete(self, config):
@@ -324,20 +332,6 @@ class DCGAN(object):
 
         # TODO SPECIFY MASK
         # TODO FCN
-        if config.maskType == 'random':
-            fraction_masked = 0.2
-            mask = np.ones(self.image_shape)
-            mask[np.random.random(self.image_shape[:2]) < fraction_masked] = 0.0
-        elif config.maskType == 'center':
-            scale = 0.25
-            assert(scale <= 0.5)
-            mask = np.ones(self.image_shape)
-            sw, sh = self.output_size_w, self.output_size_h
-            l, d = int(sw*scale), int(sh*scale)
-            r, u = int(sw*(1.0-scale)), int(sh*(1.0-scale))
-            mask[d:u, l:r, :] = 0.0
-        else:
-            assert(False)
 
         if config.dataset == 'inria':
             print ('Select the INRIAPerson!!!')
@@ -345,9 +339,11 @@ class DCGAN(object):
         elif config.dataset == 'cityscapes':
             print ('Select the CITYSCAPES!!!')
             data_set_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
-        data = glob(os.path.join(data_set_dir, "*.png"))
+            mask_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random_mask"
+        data = sorted(glob(os.path.join(data_set_dir, "*.png")))
+        mask = sorted(glob(os.path.join(mask_dir, "*.png")))
         batch_idxs = min(len(data), config.train_size) // config.batch_size
-        np.random.shuffle(data)
+        # TODO : data shuffle
 
         for idx in xrange(0, batch_idxs):
             if not os.path.exists(os.path.join(config.outDir, str(idx), 'hats_imgs')):
@@ -360,22 +356,43 @@ class DCGAN(object):
                      for batch_file in batch_files]
             batch_images = np.array(batch).astype(np.float32)[:, :, :, 0:3]
 
-            batch_mask = np.resize(mask, [self.batch_size] + self.image_shape)
+            #T TODO: better mask
+            if config.maskType == 'random':
+                fraction_masked = 0.2
+                mask = np.ones(self.image_shape)
+                mask[np.random.random(self.image_shape[:2]) < fraction_masked] = 0.0
+                batch_masks = np.resize(mask, [self.batch_size] + self.image_shape)
+            elif config.maskType == 'center':
+                scale = 0.25
+                assert (scale <= 0.5)
+                mask = np.ones(self.image_shape)
+                sw, sh = self.output_size_w, self.output_size_h
+                l, d = int(sw * scale), int(sh * scale)
+                r, u = int(sw * (1.0 - scale)), int(sh * (1.0 - scale))
+                mask[d:u, l:r, :] = 0.0
+                batch_masks = np.resize(mask, [self.batch_size] + self.image_shape)
+            elif config.maskType == 'mask':
+                batch_mask_files = mask[idx * config.batch_size:(idx + 1) * config.batch_size]
+                batch_m = [get_image_without_crop(batch_mask, need_augment=True)
+                         for batch_mask in batch_mask_files]
+                batch_masks = np.array(batch_m).astype(np.float32)[:, :, :, 0:3]
+            else:
+                assert False
+
             zhats = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
             v = 0
 
-            nRows = np.ceil(config.batch_size/8)
-            nCols = 8
-            save_images(batch_images, [4 ,4],
+            batch_sqrt = np.ceil(np.sqrt(config.batch_size))
+            save_images(batch_images, [batch_sqrt, batch_sqrt],
                         os.path.join(config.outDir, '{}_before.png'.format(idx)))
-            masked_images = np.multiply(batch_images, batch_mask)
-            save_images(masked_images, [4, 4],
+            masked_images = np.multiply(batch_images, batch_masks)
+            save_images(masked_images, [batch_sqrt, batch_sqrt],
                         os.path.join(config.outDir, '{}_masked.png'.format(idx)))
 
             for i in xrange(config.nIter):
                 fd = {
                     self.z: zhats,
-                    self.mask: batch_mask,
+                    self.mask: batch_masks,
                     self.images: batch_images,
                 }
                 run = [self.complete_loss, self.grad_complete_loss, self.G]
@@ -390,15 +407,13 @@ class DCGAN(object):
                     print(i, np.mean(loss))
                     imgName = os.path.join(config.outDir, str(idx),
                                            'hats_imgs/{:04d}.png'.format(i))
-                    nRows = np.ceil(config.batch_size/8)
-                    nCols = 8
-                    save_images(G_imgs, [nRows,nCols], imgName)
+                    save_images(G_imgs, [batch_sqrt, batch_sqrt], imgName)
 
-                    inv_masked_hat_images = np.multiply(G_imgs, 1.0-batch_mask)
+                    inv_masked_hat_images = np.multiply(G_imgs, 1.0-batch_masks)
                     completeed = masked_images + inv_masked_hat_images
                     imgName = os.path.join(config.outDir, str(idx),
                                            'completed/{:04d}.png'.format(i))
-                    save_images(completeed, [4, 4], imgName)
+                    save_images(completeed, [batch_sqrt, batch_sqrt], imgName)
 
 
     def discriminator(self, image, y=None, reuse=False):

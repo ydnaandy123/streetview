@@ -16,8 +16,12 @@ get_stddev = lambda x, k_h, k_w: 1/math.sqrt(k_w*k_h*x.get_shape()[-1])
 
 def get_image(image_path, image_size, is_crop=True, resize_w=64, is_grayscale = False):
     return transform(imread(image_path, is_grayscale), image_size, is_crop, resize_w)
-def get_image_without_crop(image_path, is_grayscale = False):
-    return np.array(imread(image_path, is_grayscale))/127.5 - 1.
+def get_image_without_crop(image_path, is_grayscale = False, need_augment=False):
+    if need_augment:
+        gray = np.array(imread(image_path, is_grayscale))/255.
+        return np.dstack((gray, gray, gray))
+    else:
+        return np.array(imread(image_path, is_grayscale))/127.5 - 1.
 
 def save_images(images, size, image_path):
     return imsave(inverse_transform(images), size, image_path)

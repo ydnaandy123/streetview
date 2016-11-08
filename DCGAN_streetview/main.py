@@ -21,11 +21,11 @@ flags.DEFINE_integer("output_size_w", 512, "The size of the output images to pro
 # completion
 flags.DEFINE_float("lam", 0.1, "hyper-parameter that controls how import two loss [0.1]")
 flags.DEFINE_string("outDir", "completions", "Directory name to save the output [completions]")
-flags.DEFINE_string("maskType", "center", "type of mask [center]")
+flags.DEFINE_string("maskType", "mask", "type of mask [center]")
 flags.DEFINE_integer("nIter", 6000, "The number of iteration [1000]")
 flags.DEFINE_float("lr", 0.01, "WTF [0.01]")
 flags.DEFINE_float("momentum", 0.9, "WTF [0.9]")
-# TODO lr and mometum
+# TODO lr and momentum
 
 # almost not use in my application(or be replaced)
 flags.DEFINE_integer("output_size", 256, "The size of the output images to produce [64]")

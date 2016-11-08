@@ -4,11 +4,10 @@
 import pprint
 import tensorflow as tf
 
+import os
 import numpy as np
+from glob import glob
 
-
-data = [1, 2, 3, 4, 5]
-
-print data + [10, 12]
-epoch = 10
-print('123{:d}'.format(epoch))
+st = '123.456'
+x, y= st.split('.')
+print(x)
