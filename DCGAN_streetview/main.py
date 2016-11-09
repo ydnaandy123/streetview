@@ -35,13 +35,18 @@ flags.DEFINE_boolean("is_train", False, "True for training, False for testing [F
 flags.DEFINE_boolean("visualize", False, "True for visualizing, False for nothing [False]")
 
 # change ckt point
-flags.DEFINE_string("checkpoint_dir", "/home/andy/checkpoint/DCGAN",
+flags.DEFINE_string("checkpoint_dir", "/mnt/data/andy/checkpoint/DCGAN",
+                    "Directory name to save the checkpoints [checkpoint]")
+flags.DEFINE_string("dataset_dir", "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom",
                     "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
 FLAGS = flags.FLAGS
 
-
 # TODO Fully cityscape dataset and hacker
+
+CITYSCAPES_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom"
+CITYSCAPES_mask_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_mask"
+INRIA_dir = "/mnt/data/andy/dataset/INRIAPerson/96X160H96/Train/pos"
 
 def main(_):
     pp.pprint(flags.FLAGS.__flags)
@@ -52,27 +57,30 @@ def main(_):
         os.makedirs(FLAGS.sample_dir)
 
     # Do not take all memory
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.60)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.40)
     # sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+        # w/ y label
         if FLAGS.dataset == 'mnist':
             dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size, y_dim=10, output_size=28,
                           c_dim=1, dataset_name=FLAGS.dataset, is_crop=FLAGS.is_crop,
                           checkpoint_dir=FLAGS.checkpoint_dir)
-        elif FLAGS.dataset == 'cityscapes':
-            print 'Select CITYSCAPES'
-            FLAGS.output_size_h = 192
-            dcgan = DCGAN(sess, batch_size=16, output_size_h=192, output_size_w=512, c_dim=3,
-                          dataset_name=FLAGS.dataset, is_crop=False, checkpoint_dir=FLAGS.checkpoint_dir)
-        elif FLAGS.dataset == 'inria':
-            print 'Select INRIAPerson'
-            dcgan = DCGAN(sess, batch_size=16, output_size_h=160, output_size_w=96, c_dim=3,
-                          dataset_name=FLAGS.dataset, is_crop=False, checkpoint_dir=FLAGS.checkpoint_dir)
+        # w/o y label
         else:
-            dcgan = DCGAN(sess, image_size=FLAGS.image_size, batch_size=FLAGS.batch_size, output_size=FLAGS.output_size,
-                          c_dim=FLAGS.c_dim,
-                          dataset_name=FLAGS.dataset, is_crop=FLAGS.is_crop, checkpoint_dir=FLAGS.checkpoint_dir)
+            if FLAGS.dataset == 'cityscapes':
+                print 'Select CITYSCAPES'
+                mask_dir = CITYSCAPES_mask_dir
+                FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 192, 512, False
+                FLAGS.dataset_dir = CITYSCAPES_dir
+            elif FLAGS.dataset == 'inria':
+                print 'Select INRIAPerson'
+                FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 160, 96, False
+                FLAGS.dataset_dir = INRIA_dir
+
+            dcgan = DCGAN(sess, batch_size=FLAGS.batch_size, output_size_h=FLAGS.output_size_h, output_size_w=FLAGS.output_size_w, c_dim=FLAGS.c_dim,
+                          dataset_name=FLAGS.dataset, is_crop=FLAGS.is_crop,
+                          checkpoint_dir=FLAGS.checkpoint_dir, dataset_dir=FLAGS.dataset_dir)
 
         if FLAGS.mode == 'test':
             print('Testing!')
@@ -82,7 +90,7 @@ def main(_):
             dcgan.train(FLAGS)
         elif FLAGS.mode == 'complete':
             print('Complete!')
-            dcgan.complete(FLAGS)
+            dcgan.complete(FLAGS, mask_dir)
 
 
 if __name__ == '__main__':

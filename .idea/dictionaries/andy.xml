@@ -2,6 +2,7 @@
   <dictionary name="andy">
     <words>
       <w>cityscapes</w>
+      <w>dataset</w>
       <w>dcgan</w>
       <w>idxs</w>
       <w>inria</w>

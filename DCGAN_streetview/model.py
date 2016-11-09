@@ -7,16 +7,13 @@ from six.moves import xrange
 from ops import *
 from utils import *
 
-CITYSCAPES_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom"
-INRIA_dir = "/home/andy/dataset/INRIAPerson/96X160H96/Train/pos"
-
 
 class DCGAN(object):
     def __init__(self, sess,
                  batch_size=64, output_size_h=256, output_size_w=512, lam=0.1,
                  z_dim=100, gf_dim=128, df_dim=64, gfc_dim=1024, dfc_dim=1024,
                  y_dim=None, c_dim=3, image_size=256, output_size=256, is_crop=False,
-                 dataset_name='default', checkpoint_dir=None):
+                 dataset_name='default', checkpoint_dir=None, dataset_dir=None):
         # The origin paper gf_dim should be 128
         """
 
@@ -76,6 +73,7 @@ class DCGAN(object):
 
         self.dataset_name = dataset_name
         self.checkpoint_dir = checkpoint_dir
+        self.dataset_dir = dataset_dir
         self.build_model()
 
     def build_model(self):
@@ -145,20 +143,13 @@ class DCGAN(object):
             sample_labels = data_y[0:self.sample_size]
             batch_idxs = min(len(data_X), config.train_size) // config.batch_size
 
-        elif config.dataset == 'cityscapes':
-            data_set_dir = CITYSCAPES_dir
+        else:
+            data = glob(os.path.join(config.dataset_dir, "*.png"))
+            batch_idxs = min(len(data), config.train_size) // config.batch_size
 
-        elif config.dataset == 'inria':
-            data_set_dir = INRIA_dir
-
-        data = glob(os.path.join(data_set_dir, "*.png"))
-        batch_idxs = min(len(data), config.train_size) // config.batch_size
-        np.random.shuffle(data)
-
-        sample_files = data[0:self.sample_size]
-        sample = [get_image_without_crop(sample_file, is_grayscale=self.is_grayscale)
-                  for sample_file in sample_files]
-        sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
+            sample_files = data[0:self.sample_size]
+            sample = [get_image_without_crop(sample_file) for sample_file in sample_files]
+            sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
 
         sample_z = np.random.uniform(-1, 1, size=(self.sample_size, self.z_dim))
         batch_sqrt = np.ceil(np.sqrt(config.batch_size))
@@ -214,8 +205,7 @@ class DCGAN(object):
                     errG = self.g_loss.eval({self.z: batch_z, self.y: batch_labels})
                 else:
                     batch_files = data[idx * config.batch_size:(idx + 1) * config.batch_size]
-                    batch = [get_image_without_crop(batch_file, is_grayscale=self.is_grayscale)
-                             for batch_file in batch_files]
+                    batch = [get_image_without_crop(batch_file) for batch_file in batch_files]
                     batch_images = np.array(batch).astype(np.float32)
                     batch_images = batch_images[:, :, :, 0:3]
                     # TODO How many D and G?
@@ -259,21 +249,14 @@ class DCGAN(object):
                     self.save(config.checkpoint_dir, counter)
 
     def test(self, config):
-        if config.dataset == 'cityscapes':
-            data_set_dir = CITYSCAPES_dir
-
-        elif config.dataset == 'inria':
-            data_set_dir = INRIA_dir
-
-        data = glob(os.path.join(data_set_dir, "*.png"))
-        np.random.shuffle(data)  # help or not?
+        data = glob(os.path.join(config.dataset_dir, "*.png"))
 
         sample_files = data[0:self.sample_size]
-        sample = [get_image_without_crop(sample_file, is_grayscale=self.is_grayscale)
-                  for sample_file in sample_files]
+        sample = [get_image_without_crop(sample_file) for sample_file in sample_files]
         sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
 
         sample_z = np.random.uniform(-1, 1, size=(self.sample_size, self.z_dim))
+        print(sample_z)
 
         tf.initialize_all_variables().run()
 
@@ -287,7 +270,7 @@ class DCGAN(object):
             feed_dict={self.z: sample_z, self.images: sample_images}
         )
 
-        store_dir = './test'
+        store_dir = './test/'
         if not os.path.exists(store_dir):
             os.makedirs(store_dir)
 
@@ -296,26 +279,16 @@ class DCGAN(object):
             store_dir, '{}_{:d}_{:d}_{:d}.png'.format(config.dataset, config.batch_size, config.output_size_h,
                                                       config.output_size_w)))
 
-    def complete(self, config):
+    def complete(self, config, mask_dir=None):
         if not os.path.exists(config.outDir):
             os.makedirs(config.outDir)
 
         tf.initialize_all_variables().run()
 
-        isLoaded = self.load(self.checkpoint_dir)
-        assert (isLoaded)
+        is_loaded = self.load(self.checkpoint_dir)
+        assert is_loaded
 
-        # TODO FCN
-
-        if config.dataset == 'inria':
-            print ('Select the INRIAPerson!!!')
-            data_set_dir = "/home/andy/dataset/INRIAPerson/96X160H96/Train/pos"
-        elif config.dataset == 'cityscapes':
-            print ('Select the CITYSCAPES!!!')
-            data_set_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random"
-            mask_dir = "/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random_mask"
-        data = sorted(glob(os.path.join(data_set_dir, "*.png")))
-        mask = sorted(glob(os.path.join(mask_dir, "*.png")))
+        data = sorted(glob(os.path.join(config.dataset_dir, "*.png")))
         batch_idxs = min(len(data), config.train_size) // config.batch_size
 
         for idx in xrange(0, batch_idxs):
@@ -325,8 +298,7 @@ class DCGAN(object):
                 os.makedirs(os.path.join(config.outDir, str(idx), 'completed'))
 
             batch_files = data[idx * config.batch_size:(idx + 1) * config.batch_size]
-            batch = [get_image_without_crop(batch_file, is_grayscale=self.is_grayscale)
-                     for batch_file in batch_files]
+            batch = [get_image_without_crop(batch_file) for batch_file in batch_files]
             batch_images = np.array(batch).astype(np.float32)[:, :, :, 0:3]
 
             if config.maskType == 'random':
@@ -344,6 +316,7 @@ class DCGAN(object):
                 mask[d:u, l:r, :] = 0.0
                 batch_masks = np.resize(mask, [self.batch_size] + self.image_shape)
             elif config.maskType == 'mask':
+                mask = sorted(glob(os.path.join(mask_dir, "*.png")))
                 batch_mask_files = mask[idx * config.batch_size:(idx + 1) * config.batch_size]
                 batch_m = [get_image_without_crop(batch_mask, need_augment=True)
                            for batch_mask in batch_mask_files]
