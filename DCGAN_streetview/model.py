@@ -220,11 +220,6 @@ class DCGAN(object):
                     batch_images = batch_images[:, :, :, 0:3]
                     # TODO How many D and G?
                     # Update D network
-                    # _, summary_str = self.sess.run([d_optim, self.d_sum],
-                    #    feed_dict={ self.images: batch_images, self.z: batch_z })
-                    # self.writer.add_summary(summary_str, counter)
-
-                    # Update D network
                     for i in range(0, 2):
                         _, summary_str = self.sess.run([d_optim, self.d_sum],
                                                        feed_dict={self.images: batch_images, self.z: batch_z})

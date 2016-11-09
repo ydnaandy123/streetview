@@ -62,6 +62,7 @@ def main(_):
                           checkpoint_dir=FLAGS.checkpoint_dir)
         elif FLAGS.dataset == 'cityscapes':
             print 'Select CITYSCAPES'
+            FLAGS.output_size_h = 192
             dcgan = DCGAN(sess, batch_size=16, output_size_h=192, output_size_w=512, c_dim=3,
                           dataset_name=FLAGS.dataset, is_crop=False, checkpoint_dir=FLAGS.checkpoint_dir)
         elif FLAGS.dataset == 'inria':
