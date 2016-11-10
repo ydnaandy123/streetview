@@ -55,8 +55,13 @@ def crop_images(dataset_dir, is_mask=False):
         scipy.misc.imsave('/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_mask_re/' + filePath.split('/')[-1],
                           mask[0:192, :])
         #break
-crop_images('/mnt/data/andy/dataset/CITYSCAPES/gtFine_trainvaltest/gtFine/train', is_mask=True)
 
+filePath = '/home/andy/Github/streetview/poissonblending/testimages/aachen_000017_000019_gtFine_color.png'
+img = scipy.misc.imread(filePath).astype(np.float)
+mask = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
+mask[np.nonzero(img == 0)] = 255
+scipy.misc.imsave(filePath.split('/')[-1],
+                  mask)
 
 """
 crop_images_same_dir('/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom')
