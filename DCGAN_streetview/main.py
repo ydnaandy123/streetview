@@ -48,6 +48,9 @@ CITYSCAPES_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom"
 CITYSCAPES_mask_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_mask"
 INRIA_dir = "/mnt/data/andy/dataset/INRIAPerson/96X160H96/Train/pos"
 
+
+# TODO:  -GAN-improved - VAE - step-by-step GAN
+# TODO: Specific generative model?
 def main(_):
     pp.pprint(flags.FLAGS.__flags)
 

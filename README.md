@@ -10,7 +10,7 @@ Automatically generate and complete the streetview
 - TODO: 
   - GAN-improved
   - VAE
-
+  - step-by-step GAN
 **Now we can pick an arbitrary z~p_z and decode it to a image**
 
 ## Completion
@@ -21,9 +21,17 @@ Automatically generate and complete the streetview
 - How to use: DCGAN_streetview/ 
   `main.py --dataset datasetname --mode complete`
 - TODO: 
-  - [poisson blending](http://www.ctralie.com/Teaching/PoissonImageEditing/)
+  -  Specific generative model?
 
-**Can we encode a image to z?**
+## Poisson blending
+- [Poisson Image Editing](http://www.cs.jhu.edu/~misha/Fall07/Papers/Perez03.pdf)
+- Synthesize new image with poisson blending
+![str_str_poisson](/src/Poisson/14/14.gif)
+- How to use: poissonblending/
+  `main.py`
+- TODO:
+  - Heat map
+  
 
 ## Observations
 - related to [Generative Image Modeling using Style and Structure Adversarial Networks](https://arxiv.org/abs/1603.05631)
