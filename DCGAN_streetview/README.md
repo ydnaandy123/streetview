@@ -7,8 +7,3 @@ Tensorflow implementation of [Deep Convolutional Generative Adversarial Networks
 - please refer to the original website for more detailed information [carpedm20/DCGAN-tensorflow](https://github.com/carpedm20/DCGAN-tensorflow)
 
 
-
-# TODO
-
-- model line:358 won't that cover the old one?
-
