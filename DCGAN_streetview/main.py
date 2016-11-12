@@ -19,7 +19,7 @@ flags.DEFINE_integer("output_size_h", 256, "The size of the output images to pro
 flags.DEFINE_integer("output_size_w", 512, "The size of the output images to produce [512]")
 
 # completion
-flags.DEFINE_float("lam", 0.1, "hyper-parameter that controls how import two loss [0.1]")
+flags.DEFINE_float("lam", 0.01, "hyper-parameter that controls how import two loss [0.1]")
 flags.DEFINE_string("outDir", "completions", "Directory name to save the output [completions]")
 flags.DEFINE_string("maskType", "mask", "type of mask [center]")
 flags.DEFINE_integer("nIter", 6000, "The number of iteration [1000]")

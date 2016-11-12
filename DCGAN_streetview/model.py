@@ -627,6 +627,7 @@ class Discriminator(object):
     def build_model(self):
 
         self.images = tf.placeholder(tf.float32, [self.batch_size] + self.image_shape, name='real_images')
+        self.images_false = tf.placeholder(tf.float32, [self.batch_size] + self.image_shape, name='false_images')
         self.sample_images = tf.placeholder(tf.float32, [self.sample_size] + self.image_shape, name='sample_images')
         self.z = tf.placeholder(tf.float32, [None, self.z_dim], name='z')
 
@@ -644,7 +645,7 @@ class Discriminator(object):
             # D: real, D_: fake
             # The logit function is the inverse of the sigmoidal "logistic" function
             self.D, self.D_logits = self.discriminator(self.images)
-            self.D_, self.D_logits_ = self.discriminator(self.G, reuse=True)
+            self.D_, self.D_logits_ = self.discriminator(self.images_false, reuse=True)
 
             # TODO why can't this move above on D???
             self.sampler = self.sampler(self.z)
@@ -693,6 +694,8 @@ class Discriminator(object):
 
         else:
             data = glob(os.path.join(config.dataset_dir, "*.png"))
+            # TODO FALSE data dir
+            data_false = glob(os.path.join(config.dataset_dir, "*.png"))
             batch_idxs = min(len(data), config.train_size) // config.batch_size
 
             sample_files = data[0:self.sample_size]
@@ -707,8 +710,8 @@ class Discriminator(object):
         # doesn't require hand-tuning of the learning rate, momentum, and other hyper-parameters.
         d_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.d_loss, var_list=self.d_vars)
-        g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
-            .minimize(self.g_loss, var_list=self.g_vars)
+        #g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
+        #    .minimize(self.g_loss, var_list=self.g_vars)
         tf.initialize_all_variables().run()
 
         self.g_sum = tf.merge_summary([self.z_sum, self.d__sum, self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
@@ -727,7 +730,7 @@ class Discriminator(object):
             np.random.shuffle(data)
 
             for idx in xrange(0, batch_idxs):
-                batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]).astype(np.float32)
+                #batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]).astype(np.float32)
 
                 if config.dataset == 'mnist':
                     batch_images = data_X[idx * config.batch_size:(idx + 1) * config.batch_size]
@@ -754,24 +757,28 @@ class Discriminator(object):
                 else:
                     batch_files = data[idx * config.batch_size:(idx + 1) * config.batch_size]
                     batch = [get_image_without_crop(batch_file) for batch_file in batch_files]
-                    batch_images = np.array(batch).astype(np.float32)
-                    batch_images = batch_images[:, :, :, 0:3]
+                    batch_images = np.array(batch).astype(np.float32)[:, :, :, 0:3]
+
+                    batch_files_false = data[idx * config.batch_size:(idx + 1) * config.batch_size]
+                    batch_false = [get_image_without_crop(batch_file_false) for batch_file_false in batch_files_false]
+                    batch_images_false = np.array(batch_false).astype(np.float32)[:, :, :, 0:3]
+
                     # TODO How many D and G?
                     # Update D network
                     for i in range(0, 3):
                         _, summary_str = self.sess.run([d_optim, self.d_sum],
-                                                       feed_dict={self.images: batch_images, self.z: batch_z})
-                        self.writer.add_summary(summary_str, counter)
-
-                    # Update G network
-                    for i in range(0, 2):
-                        _, summary_str = self.sess.run([g_optim, self.g_sum],
-                                                       feed_dict={self.z: batch_z})
+                                                       feed_dict={self.images: batch_images, self.z: batch_images_false})
                     self.writer.add_summary(summary_str, counter)
 
-                    errD_fake = self.d_loss_fake.eval({self.z: batch_z})
+                    # Update G network
+                    #for i in range(0, 2):
+                    #    _, summary_str = self.sess.run([g_optim, self.g_sum],
+                    #                                   feed_dict={self.z: batch_z})
+                    #self.writer.add_summary(summary_str, counter)
+
+                    errD_fake = self.d_loss_fake.eval({self.z: batch_images_false})
                     errD_real = self.d_loss_real.eval({self.images: batch_images})
-                    errG = self.g_loss.eval({self.z: batch_z})
+                    #errG = self.g_loss.eval({self.z: batch_z})
 
                 counter += 1
                 print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \

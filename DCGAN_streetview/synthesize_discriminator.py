@@ -46,6 +46,7 @@ FLAGS = flags.FLAGS
 
 CITYSCAPES_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom"
 CITYSCAPES_mask_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_mask"
+CITYSCAPES_syn_dir = '/mnt/data/andy/dataset/StreetView_synthesize'
 INRIA_dir = "/mnt/data/andy/dataset/INRIAPerson/96X160H96/Train/pos"
 
 
