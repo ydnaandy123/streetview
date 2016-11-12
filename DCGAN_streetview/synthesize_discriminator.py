@@ -35,11 +35,11 @@ flags.DEFINE_boolean("is_train", False, "True for training, False for testing [F
 flags.DEFINE_boolean("visualize", False, "True for visualizing, False for nothing [False]")
 
 # change ckt point
-flags.DEFINE_string("checkpoint_dir", "/mnt/data/andy/checkpoint/DCGAN",
+flags.DEFINE_string("checkpoint_dir", "/mnt/data/andy/checkpoint/DCGAN_syn",
                     "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("dataset_dir", "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom",
                     "Directory name to save the checkpoints [checkpoint]")
-flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
+flags.DEFINE_string("sample_dir", "samples_syn", "Directory name to save the image samples [samples]")
 FLAGS = flags.FLAGS
 
 # TODO Fully cityscape dataset and hacker
@@ -49,9 +49,8 @@ CITYSCAPES_mask_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_
 INRIA_dir = "/mnt/data/andy/dataset/INRIAPerson/96X160H96/Train/pos"
 
 
-# TODO:  -GAN-improved - VAE - step-by-step GAN
-# TODO: Specific generative model?
 def main(_):
+
     pp.pprint(flags.FLAGS.__flags)
 
     if not os.path.exists(FLAGS.checkpoint_dir):
@@ -87,13 +86,10 @@ def main(_):
 
         if FLAGS.mode == 'test':
             print('Testing!')
-            dcgan.test(FLAGS)
         elif FLAGS.mode == 'train':
             print('Train!')
-            dcgan.train(FLAGS)
         elif FLAGS.mode == 'complete':
             print('Complete!')
-            dcgan.complete(FLAGS, mask_dir)
 
 
 if __name__ == '__main__':

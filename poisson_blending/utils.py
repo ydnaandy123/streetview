@@ -30,6 +30,7 @@ def prepare_mask(mask):
 
 def blend(img_target, img_source, img_mask, offset=(0, 0)):
     # compute regions to be blended
+
     region_source = (
         max(-offset[0], 0),
         max(-offset[1], 0),
@@ -43,15 +44,20 @@ def blend(img_target, img_source, img_mask, offset=(0, 0)):
     region_size = (region_source[2] - region_source[0], region_source[3] - region_source[1])
 
     # clip and normalize mask image
-    img_mask = img_mask[region_source[0]:region_source[2], region_source[1]:region_source[3]]
+    #img_mask = img_mask[region_source[0]:region_source[2], region_source[1]:region_source[3]]
     #img_mask = prepare_mask(img_mask)
+
     # TODO True False
 
+
+    ped_sum = np.sum(img_mask)/255
+    # 98304 * 0.9 = 88506
+    if ped_sum > 98000:
+        print('Too small pedstrian {}/{} pixels'.format(ped_sum, 98304))
+        return False
     img_mask[img_mask == 0] = True
     img_mask[img_mask != True] = False
-    if np.all(img_mask == False):
-        print('no pedstrian')
-        return False
+
     # create coefficient matrix
     A = scipy.sparse.identity(np.prod(region_size), format='lil')
     for y in range(region_size[0]):

@@ -8,7 +8,7 @@ Automatically generate and complete the streetview
 - How to use: DCGAN_streetview/ 
   `main.py --dataset datasetname --mode train`
 - TODO: 
-  - GAN-improved
+  - GAN-improved [openai/improved-gan](https://github.com/openai/improved-gan)
   - VAE
   - step-by-step GAN
   

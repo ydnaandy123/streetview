@@ -1,57 +1,62 @@
 """
 Some codes from https://github.com/Newmu/dcgan_code
 """
-from __future__ import division
 import math
+import os
+import errno
 import json
 import random
 import pprint
 import scipy.misc
 import numpy as np
 from time import gmtime, strftime
+import tensorflow as tf
 
 pp = pprint.PrettyPrinter()
 
 get_stddev = lambda x, k_h, k_w: 1/math.sqrt(k_w*k_h*x.get_shape()[-1])
 
-def get_image(image_path, image_size, is_crop=True, resize_w=64, is_grayscale = False):
-    return transform(imread(image_path, is_grayscale), image_size, is_crop, resize_w)
-def get_image_without_crop(image_path, is_grayscale = False, need_augment=False):
-    if need_augment:
-        gray = np.array(imread(image_path, is_grayscale))/255.
-        return np.dstack((gray, gray, gray))
-    else:
-        return np.array(imread(image_path, is_grayscale))/127.5 - 1.
+index = 0
+def get_image(image_path, image_size, is_crop=True, resize_w=64):
+    global index
+    out = transform(imread(image_path), image_size, is_crop, resize_w)
+    return out
+
 
 def save_images(images, size, image_path):
     return imsave(inverse_transform(images), size, image_path)
 
-def imsave(images, size, path):
-    return scipy.misc.imsave(path, merge(images, size))
-
-def imread(path, is_grayscale = False):
-    if (is_grayscale):
-        return scipy.misc.imread(path, flatten = True).astype(np.float)
-    else:
-        return scipy.misc.imread(path).astype(np.float)
+def imread(path):
+    img = scipy.misc.imread(path)
+    if len(img.shape) == 0:
+        raise ValueError(path + " got loaded as a dimensionless array!")
+    return img.astype(np.float)
 
 def merge_images(images, size):
     return inverse_transform(images)
 
 def merge(images, size):
     h, w = images.shape[1], images.shape[2]
-    img = np.zeros((int(h * size[0]), int(w * size[1]), 3))
+    img = np.zeros((h * size[0], w * size[1], 3))
+
     for idx, image in enumerate(images):
-        i = int(idx % size[1])
-        j = int(idx // size[1])
+        i = idx % size[1]
+        j = idx / size[1]
         img[j*h:j*h+h, i*w:i*w+w, :] = image
 
     return img
 
+def imsave(images, size, path):
+    return scipy.misc.imsave(path, merge(images, size))
+
 def center_crop(x, crop_h, crop_w=None, resize_w=64):
+
+    h, w = x.shape[:2]
+    crop_h = min(h, w)  # we changed this to override the original DCGAN-TensorFlow behavior
+                        # Just use as much of the image as possible while keeping it square
+
     if crop_w is None:
         crop_w = crop_h
-    h, w = x.shape[:2]
     j = int(round((h - crop_h)/2.))
     i = int(round((w - crop_w)/2.))
     return scipy.misc.imresize(x[j:j+crop_h, i:i+crop_w],
@@ -59,10 +64,7 @@ def center_crop(x, crop_h, crop_w=None, resize_w=64):
 
 def transform(image, npx=64, is_crop=True, resize_w=64):
     # npx : # of pixels width/height of image
-    if is_crop:
-        cropped_image = center_crop(image, npx, resize_w=resize_w)
-    else:
-        cropped_image = image
+    cropped_image = center_crop(image, npx, resize_w=resize_w)
     return np.array(cropped_image)/127.5 - 1.
 
 def inverse_transform(images):
@@ -102,8 +104,8 @@ def to_json(output_path, *layers):
 
                 lines += """
                     var layer_%s = {
-                        "layer_type": "fc", 
-                        "sy": 1, "sx": 1, 
+                        "layer_type": "fc",
+                        "sy": 1, "sx": 1,
                         "out_sx": 1, "out_sy": 1,
                         "stride": 1, "pad": 0,
                         "out_depth": %s, "in_depth": %s,
@@ -119,7 +121,7 @@ def to_json(output_path, *layers):
 
                 lines += """
                     var layer_%s = {
-                        "layer_type": "deconv", 
+                        "layer_type": "deconv",
                         "sy": 5, "sx": 5,
                         "out_sx": %s, "out_sy": %s,
                         "stride": 2, "pad": 1,
@@ -150,10 +152,35 @@ def make_gif(images, fname, duration=2, true_image=False):
   clip.write_gif(fname, fps = len(images) / duration)
 
 def visualize(sess, dcgan, config, option):
+  option = 0
   if option == 0:
-    z_sample = np.random.uniform(-0.5, 0.5, size=(config.batch_size, dcgan.z_dim))
-    samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-    save_images(samples, [8, 8], './samples/test_%s.png' % strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+    all_samples = []
+    for i in range(484):
+      print(i)
+      samples = sess.run(dcgan.G)
+      all_samples.append(samples)
+    samples = np.concatenate(all_samples, 0)
+    n = int(np.sqrt(samples.shape[0]))
+    m = samples.shape[0] // n
+    save_images(samples, [m, n], './' + config.sample_dir + '/test.png')#_%s.png' % strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+  elif option == 5:
+    counter = 0
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(coord=coord)
+    while counter < 1005:
+        print(counter)
+        samples, fake = sess.run([dcgan.G, dcgan.d_loss_class])
+        fake = np.argsort(fake)
+        print(np.sum(samples))
+        print(fake)
+        for i in range(samples.shape[0]):
+            name = "%s%d.png" % (chr(ord('a') + counter % 10), counter)
+            img = np.expand_dims(samples[fake[i]], 0)
+            if counter >= 1000:
+                save_images(img, [1, 1], './' + config.sample_dir + '/turk/fake%d.png' % (counter - 1000))
+            else:
+                save_images(img, [1, 1], './' + config.sample_dir + '/turk/%s' % (name))
+            counter += 1
   elif option == 1:
     values = np.arange(0, 1, 1./config.batch_size)
     for idx in xrange(100):
@@ -163,19 +190,25 @@ def visualize(sess, dcgan, config, option):
         z[idx] = values[kdx]
 
       samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-      save_images(samples, [8, 8], './samples/test_arange_%s.png' % (idx))
+      save_images(samples, [8, 8], './' + options.sample_dir + '/test_arange_%s.png' % (idx))
   elif option == 2:
     values = np.arange(0, 1, 1./config.batch_size)
     for idx in [random.randint(0, 99) for _ in xrange(100)]:
       print(" [*] %d" % idx)
-      z = np.random.uniform(-0.2, 0.2, size=(dcgan.z_dim))
-      z_sample = np.tile(z, (config.batch_size, 1))
+
+      if hasattr(dcgan, z):
+        z = np.random.uniform(-0.2, 0.2, size=(dcgan.z_dim))
+        z_sample = np.tile(z, (config.batch_size, 1))
       #z_sample = np.zeros([config.batch_size, dcgan.z_dim])
       for kdx, z in enumerate(z_sample):
         z[idx] = values[kdx]
 
-      samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-      make_gif(samples, './samples/test_gif_%s.gif' % (idx))
+      if hasattr(dcgan, "sampler"):
+          sampler = dcgan.sampler
+      else:
+          sampler = dcgan.G
+      samples = sess.run(sampler, feed_dict={dcgan.z: z_sample})
+      make_gif(samples, './' + config.sample_dir + '/test_gif_%s.gif' % (idx))
   elif option == 3:
     values = np.arange(0, 1, 1./config.batch_size)
     for idx in xrange(100):
@@ -185,7 +218,7 @@ def visualize(sess, dcgan, config, option):
         z[idx] = values[kdx]
 
       samples = sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample})
-      make_gif(samples, './samples/test_gif_%s.gif' % (idx))
+      make_gif(samples, './' + config.sample_dir + '/test_gif_%s.gif' % (idx))
   elif option == 4:
     image_set = []
     values = np.arange(0, 1, 1./config.batch_size)
@@ -196,8 +229,28 @@ def visualize(sess, dcgan, config, option):
       for kdx, z in enumerate(z_sample): z[idx] = values[kdx]
 
       image_set.append(sess.run(dcgan.sampler, feed_dict={dcgan.z: z_sample}))
-      make_gif(image_set[-1], './samples/test_gif_%s.gif' % (idx))
+      make_gif(image_set[-1], './' + config.sample_dir + '/test_gif_%s.gif' % (idx))
 
     new_image_set = [merge(np.array([images[idx] for images in image_set]), [10, 10]) \
         for idx in range(64) + range(63, -1, -1)]
-    make_gif(new_image_set, './samples/test_gif_merged.gif', duration=8)
+    make_gif(new_image_set, './' + config.sample_dir + '/test_gif_merged.gif', duration=8)
+
+
+def colorize(img):
+    if img.ndim == 2:
+        img = img.reshape(img.shape[0], img.shape[1], 1)
+        img = np.concatenate([img, img, img], axis=2)
+    if img.shape[2] == 4:
+        img = img[:, :, 0:3]
+    return img
+
+
+def mkdir_p(path):
+    # Copied from http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise

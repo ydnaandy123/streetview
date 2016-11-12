@@ -35,7 +35,7 @@ source_mask_dir = '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_mask
 target_dir = '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom'
 target_heatmap_dir = '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_mask'
 output_dir = '/mnt/data/andy/dataset/StreetView_synthesize'
-sample_size = 20
+sample_size = 2975
 
 # TODO FLAGS
 
@@ -69,7 +69,7 @@ def main():
         #output_dir_cur = output_dir
         if not os.path.exists(output_dir_cur):
             os.makedirs(output_dir_cur)
-
+        print(i)
         scipy.misc.imsave(os.path.join(output_dir_cur, 'source{}.png'.format(i)), sources[i])
         scipy.misc.imsave(os.path.join(output_dir_cur, 'source_mask{}.png'.format(i)), source_masks[i])
         scipy.misc.imsave(os.path.join(output_dir_cur, 'target{}.png'.format(i)), targets[i])
