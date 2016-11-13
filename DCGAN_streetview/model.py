@@ -588,36 +588,15 @@ class Discriminator(object):
         self.c_dim = c_dim
         self.image_shape = [output_size_h, output_size_w, c_dim]
 
-        self.y_dim = y_dim
-        self.z_dim = z_dim
-        self.gf_dim = gf_dim
+        #self.y_dim = y_dim
+        #self.z_dim = z_dim
+        #self.gf_dim = gf_dim
         self.df_dim = df_dim
-
-        # This block isn't used in my application
-        self.gfc_dim = gfc_dim  # we don't use it.
-        self.dfc_dim = dfc_dim  # we don't use it.
-        self.image_size = image_size  # Doesn't matter, the input image is already cropped so the size is equal to out put size.
-        self.output_size = output_size  # This not use any more. Since the width and height may not equal.
-        self.is_crop = is_crop  # False because we already cropped it.
-        self.is_grayscale = (c_dim == 1)
-
-        # For completion
-        self.lam = lam
 
         # batch normalization : deals with poor initialization helps gradient flow
         # one of amazing part of this work
         self.d_bn1 = batch_norm(name='d_bn1')
         self.d_bn2 = batch_norm(name='d_bn2')
-
-        if not self.y_dim:
-            self.d_bn3 = batch_norm(name='d_bn3')
-
-        self.g_bn0 = batch_norm(name='g_bn0')
-        self.g_bn1 = batch_norm(name='g_bn1')
-        self.g_bn2 = batch_norm(name='g_bn2')
-
-        if not self.y_dim:
-            self.g_bn3 = batch_norm(name='g_bn3')
 
         self.dataset_name = dataset_name
         self.checkpoint_dir = checkpoint_dir
@@ -628,32 +607,15 @@ class Discriminator(object):
 
         self.images = tf.placeholder(tf.float32, [self.batch_size] + self.image_shape, name='real_images')
         self.images_false = tf.placeholder(tf.float32, [self.batch_size] + self.image_shape, name='false_images')
-        self.sample_images = tf.placeholder(tf.float32, [self.sample_size] + self.image_shape, name='sample_images')
-        self.z = tf.placeholder(tf.float32, [None, self.z_dim], name='z')
 
-        if self.y_dim:
-            self.y = tf.placeholder(tf.float32, [self.batch_size, self.y_dim], name='y')
-            self.G = self.generator(self.z, self.y)
-            self.D_logits, self.D = self.discriminator(self.images, self.y, reuse=False)
-            self.D_logits_, self.D_ = self.discriminator(self.G, self.y, reuse=True)
+        # D: sigmoid, D_logits: d_h3_lin
+        # D: real, D_: fake
+        # The logit function is the inverse of the sigmoidal "logistic" function
+        self.D, self.D_logits = self.discriminator(self.images)
+        self.D_, self.D_logits_ = self.discriminator(self.images_false, reuse=True)
 
-            self.sampler = self.sampler(self.z, self.y)
-        else:
-            # G: generating image
-            self.G = self.generator(self.z)
-            # D: sigmoid, D_logits: d_h3_lin
-            # D: real, D_: fake
-            # The logit function is the inverse of the sigmoidal "logistic" function
-            self.D, self.D_logits = self.discriminator(self.images)
-            self.D_, self.D_logits_ = self.discriminator(self.images_false, reuse=True)
-
-            # TODO why can't this move above on D???
-            self.sampler = self.sampler(self.z)
-
-        self.z_sum = tf.histogram_summary("z", self.z)
         self.d_sum = tf.histogram_summary("d", self.D)
         self.d__sum = tf.histogram_summary("d_", self.D_)
-        self.G_sum = tf.image_summary("G", self.G)
 
         self.d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits, tf.ones_like(self.D)))
         self.d_loss_fake = tf.reduce_mean(
@@ -662,47 +624,23 @@ class Discriminator(object):
         self.d_loss_fake_sum = tf.scalar_summary("d_loss_fake", self.d_loss_fake)
         self.d_loss = self.d_loss_real + self.d_loss_fake
 
-        self.g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits_, tf.ones_like(self.D_)))
 
         self.d_loss_sum = tf.scalar_summary("d_loss", self.d_loss)
-        self.g_loss_sum = tf.scalar_summary("g_loss", self.g_loss)
 
         t_vars = tf.trainable_variables()
 
         # Gather the variables for each of the models so they can be trained separately.
         self.d_vars = [var for var in t_vars if 'd_' in var.name]
-        self.g_vars = [var for var in t_vars if 'g_' in var.name]
 
         self.saver = tf.train.Saver()
 
-        # Completion.
-        self.mask = tf.placeholder(tf.float32, [None] + self.image_shape, name='mask')
-        self.contextual_loss = tf.reduce_sum(
-            tf.contrib.layers.flatten(
-                tf.abs(tf.mul(self.mask, self.G) - tf.mul(self.mask, self.images))), 1)
-        self.perceptual_loss = self.g_loss
-        self.complete_loss = self.contextual_loss + self.lam * self.perceptual_loss
-        self.grad_complete_loss = tf.gradients(self.complete_loss, self.z)
-
-    def train(self, config):
+    def train(self, config, syn_dir):
         """Train DCGAN"""
-        if config.dataset == 'mnist':
-            data_X, data_y = self.load_mnist()
-            sample_images = data_X[0:self.sample_size]
-            sample_labels = data_y[0:self.sample_size]
-            batch_idxs = min(len(data_X), config.train_size) // config.batch_size
 
-        else:
-            data = glob(os.path.join(config.dataset_dir, "*.png"))
-            # TODO FALSE data dir
-            data_false = glob(os.path.join(config.dataset_dir, "*.png"))
-            batch_idxs = min(len(data), config.train_size) // config.batch_size
+        data = glob(os.path.join(config.dataset_dir, "*.png"))
+        data_false = glob(os.path.join(syn_dir, "*.png"))
+        batch_idxs = min(len(data), len(data_false), config.train_size) // config.batch_size
 
-            sample_files = data[0:self.sample_size]
-            sample = [get_image_without_crop(sample_file) for sample_file in sample_files]
-            sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
-
-        sample_z = np.random.uniform(-1, 1, size=(self.sample_size, self.z_dim))
         batch_sqrt = np.ceil(np.sqrt(config.batch_size))
 
         # Gather the variables for each of the models so they can be trained separately.
@@ -710,13 +648,7 @@ class Discriminator(object):
         # doesn't require hand-tuning of the learning rate, momentum, and other hyper-parameters.
         d_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
             .minimize(self.d_loss, var_list=self.d_vars)
-        #g_optim = tf.train.AdamOptimizer(config.learning_rate, beta1=config.beta1) \
-        #    .minimize(self.g_loss, var_list=self.g_vars)
         tf.initialize_all_variables().run()
-
-        self.g_sum = tf.merge_summary([self.z_sum, self.d__sum, self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
-        self.d_sum = tf.merge_summary([self.z_sum, self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
-        self.writer = tf.train.SummaryWriter("./logs", self.sess.graph)
 
         counter = 1
         start_time = time.time()
@@ -730,61 +662,31 @@ class Discriminator(object):
             np.random.shuffle(data)
 
             for idx in xrange(0, batch_idxs):
-                #batch_z = np.random.uniform(-1, 1, [config.batch_size, self.z_dim]).astype(np.float32)
 
-                if config.dataset == 'mnist':
-                    batch_images = data_X[idx * config.batch_size:(idx + 1) * config.batch_size]
-                    batch_labels = data_y[idx * config.batch_size:(idx + 1) * config.batch_size]
-                    # Update D network
-                    _, summary_str = self.sess.run([d_optim, self.d_sum],
-                                                   feed_dict={self.images: batch_images, self.z: batch_z,
-                                                              self.y: batch_labels})
-                    self.writer.add_summary(summary_str, counter)
+                batch_files = data[idx * config.batch_size:(idx + 1) * config.batch_size]
+                batch = [get_image_without_crop(batch_file) for batch_file in batch_files]
+                batch_images = np.array(batch).astype(np.float32)[:, :, :, 0:3]
 
-                    # Update G network
-                    _, summary_str = self.sess.run([g_optim, self.g_sum],
-                                                   feed_dict={self.z: batch_z, self.y: batch_labels})
-                    self.writer.add_summary(summary_str, counter)
+                batch_files_false = data_false[idx * config.batch_size:(idx + 1) * config.batch_size]
+                batch_false = [get_image_without_crop(batch_file_false) for batch_file_false in batch_files_false]
+                batch_images_false = np.array(batch_false).astype(np.float32)[:, :, :, 0:3]
 
-                    # Run g_optim twice to make sure that d_loss does not go to zero (different from paper)
-                    _, summary_str = self.sess.run([g_optim, self.g_sum],
-                                                   feed_dict={self.z: batch_z, self.y: batch_labels})
-                    self.writer.add_summary(summary_str, counter)
-
-                    errD_fake = self.d_loss_fake.eval({self.z: batch_z, self.y: batch_labels})
-                    errD_real = self.d_loss_real.eval({self.images: batch_images, self.y: batch_labels})
-                    errG = self.g_loss.eval({self.z: batch_z, self.y: batch_labels})
-                else:
-                    batch_files = data[idx * config.batch_size:(idx + 1) * config.batch_size]
-                    batch = [get_image_without_crop(batch_file) for batch_file in batch_files]
-                    batch_images = np.array(batch).astype(np.float32)[:, :, :, 0:3]
-
-                    batch_files_false = data[idx * config.batch_size:(idx + 1) * config.batch_size]
-                    batch_false = [get_image_without_crop(batch_file_false) for batch_file_false in batch_files_false]
-                    batch_images_false = np.array(batch_false).astype(np.float32)[:, :, :, 0:3]
-
-                    # TODO How many D and G?
-                    # Update D network
-                    for i in range(0, 3):
-                        _, summary_str = self.sess.run([d_optim, self.d_sum],
-                                                       feed_dict={self.images: batch_images, self.z: batch_images_false})
-                    self.writer.add_summary(summary_str, counter)
-
-                    # Update G network
-                    #for i in range(0, 2):
-                    #    _, summary_str = self.sess.run([g_optim, self.g_sum],
-                    #                                   feed_dict={self.z: batch_z})
+                # TODO How many D and G?
+                # Update D network
+                for i in range(0, 3):
+                    _, summary_str = self.sess.run(
+                        [d_optim, self.d_sum], feed_dict={self.images: batch_images, self.images_false: batch_images_false})
                     #self.writer.add_summary(summary_str, counter)
 
-                    errD_fake = self.d_loss_fake.eval({self.z: batch_images_false})
-                    errD_real = self.d_loss_real.eval({self.images: batch_images})
-                    #errG = self.g_loss.eval({self.z: batch_z})
+
+                errD_fake = self.d_loss_fake.eval({self.images_false: batch_images_false})
+                errD_real = self.d_loss_real.eval({self.images: batch_images})
 
                 counter += 1
-                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
+                print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_fake_loss: %.8f, d_real_loss: %.8f" \
                       % (epoch, idx, batch_idxs,
-                         time.time() - start_time, errD_fake + errD_real, errG))
-
+                         time.time() - start_time, errD_fake, errD_real))
+                '''
                 if np.mod(counter, 100) == 1:
                     if config.dataset == 'mnist':
                         samples, d_loss, g_loss = self.sess.run(
@@ -799,6 +701,7 @@ class Discriminator(object):
                     save_images(samples, [batch_sqrt, batch_sqrt],
                                 './samples/train_{:02d}_{:04d}.png'.format(epoch, idx))
                     print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss))
+                '''
 
                 if np.mod(counter, 500) == 2:
                     self.save(config.checkpoint_dir, counter)

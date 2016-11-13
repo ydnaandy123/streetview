@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from model import DCGAN
+from model import DCGAN, Discriminator
 from utils import pp, visualize, to_json
 import tensorflow as tf
 
@@ -74,6 +74,7 @@ def main(_):
             if FLAGS.dataset == 'cityscapes':
                 print 'Select CITYSCAPES'
                 mask_dir = CITYSCAPES_mask_dir
+                syn_dir = CITYSCAPES_syn_dir
                 FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 192, 512, False
                 FLAGS.dataset_dir = CITYSCAPES_dir
             elif FLAGS.dataset == 'inria':
@@ -81,7 +82,7 @@ def main(_):
                 FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 160, 96, False
                 FLAGS.dataset_dir = INRIA_dir
 
-            dcgan = DCGAN(sess, batch_size=FLAGS.batch_size, output_size_h=FLAGS.output_size_h, output_size_w=FLAGS.output_size_w, c_dim=FLAGS.c_dim,
+            discriminator = Discriminator(sess, batch_size=FLAGS.batch_size, output_size_h=FLAGS.output_size_h, output_size_w=FLAGS.output_size_w, c_dim=FLAGS.c_dim,
                           dataset_name=FLAGS.dataset, is_crop=FLAGS.is_crop,
                           checkpoint_dir=FLAGS.checkpoint_dir, dataset_dir=FLAGS.dataset_dir)
 
@@ -89,6 +90,7 @@ def main(_):
             print('Testing!')
         elif FLAGS.mode == 'train':
             print('Train!')
+            discriminator.train(FLAGS, syn_dir)
         elif FLAGS.mode == 'complete':
             print('Complete!')
 

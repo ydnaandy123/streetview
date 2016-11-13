@@ -60,7 +60,7 @@ def main(_):
         os.makedirs(FLAGS.sample_dir)
 
     # Do not take all memory
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.30)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.40)
     # sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
