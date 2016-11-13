@@ -597,6 +597,7 @@ class Discriminator(object):
         # one of amazing part of this work
         self.d_bn1 = batch_norm(name='d_bn1')
         self.d_bn2 = batch_norm(name='d_bn2')
+        self.d_bn3 = batch_norm(name='d_bn3')
 
         self.dataset_name = dataset_name
         self.checkpoint_dir = checkpoint_dir
@@ -736,116 +737,17 @@ class Discriminator(object):
             store_dir, '{}_{:d}_{:d}_{:d}.png'.format(config.dataset, config.batch_size, config.output_size_h,
                                                       config.output_size_w)))
 
-    def complete(self, config, mask_dir=None):
-        if not os.path.exists(config.outDir):
-            os.makedirs(config.outDir)
-
-        tf.initialize_all_variables().run()
-
-        is_loaded = self.load(self.checkpoint_dir)
-        assert is_loaded
-
-        data = sorted(glob(os.path.join(config.dataset_dir, "*.png")))
-        batch_idxs = min(len(data), config.train_size) // config.batch_size
-
-        for idx in xrange(0, batch_idxs):
-            if not os.path.exists(os.path.join(config.outDir, str(idx), 'hats_imgs')):
-                os.makedirs(os.path.join(config.outDir, str(idx), 'hats_imgs'))
-            if not os.path.exists(os.path.join(config.outDir, str(idx), 'completed')):
-                os.makedirs(os.path.join(config.outDir, str(idx), 'completed'))
-
-            batch_files = data[idx * config.batch_size:(idx + 1) * config.batch_size]
-            batch = [get_image_without_crop(batch_file) for batch_file in batch_files]
-            batch_images = np.array(batch).astype(np.float32)[:, :, :, 0:3]
-
-            if config.maskType == 'random':
-                fraction_masked = 0.2
-                mask = np.ones(self.image_shape)
-                mask[np.random.random(self.image_shape[:2]) < fraction_masked] = 0.0
-                batch_masks = np.resize(mask, [self.batch_size] + self.image_shape)
-            elif config.maskType == 'center':
-                scale = 0.25
-                assert (scale <= 0.5)
-                mask = np.ones(self.image_shape)
-                sw, sh = self.output_size_w, self.output_size_h
-                l, d = int(sw * scale), int(sh * scale)
-                r, u = int(sw * (1.0 - scale)), int(sh * (1.0 - scale))
-                mask[d:u, l:r, :] = 0.0
-                batch_masks = np.resize(mask, [self.batch_size] + self.image_shape)
-            elif config.maskType == 'mask':
-                mask = sorted(glob(os.path.join(mask_dir, "*.png")))
-                batch_mask_files = mask[idx * config.batch_size:(idx + 1) * config.batch_size]
-                batch_m = [get_image_without_crop(batch_mask, need_augment=True)
-                           for batch_mask in batch_mask_files]
-                batch_masks = np.array(batch_m).astype(np.float32)[:, :, :, 0:3]
-            else:
-                assert False
-
-            zhats = np.random.uniform(-1, 1, size=(self.batch_size, self.z_dim))
-            v = 0
-
-            batch_sqrt = np.ceil(np.sqrt(config.batch_size))
-            save_images(batch_images, [batch_sqrt, batch_sqrt],
-                        os.path.join(config.outDir, '{}_before.png'.format(idx)))
-            masked_images = np.multiply(batch_images, batch_masks)
-            save_images(masked_images, [batch_sqrt, batch_sqrt],
-                        os.path.join(config.outDir, '{}_masked.png'.format(idx)))
-
-            for i in xrange(config.nIter):
-                fd = {
-                    self.z: zhats,
-                    self.mask: batch_masks,
-                    self.images: batch_images,
-                }
-                run = [self.complete_loss, self.grad_complete_loss, self.G]
-                loss, g, G_imgs = self.sess.run(run, feed_dict=fd)
-
-                v_prev = np.copy(v)
-                v = config.momentum * v - config.lr * g[0]
-                zhats += -config.momentum * v_prev + (1 + config.momentum) * v
-                zhats = np.clip(zhats, -1, 1)
-
-                if i % 200 == 0:
-                    print(i, np.mean(loss))
-                    imgName = os.path.join(config.outDir, str(idx),
-                                           'hats_imgs/{:04d}.png'.format(i))
-                    save_images(G_imgs, [batch_sqrt, batch_sqrt], imgName)
-
-                    inv_masked_hat_images = np.multiply(G_imgs, 1.0 - batch_masks)
-                    completeed = masked_images + inv_masked_hat_images
-                    imgName = os.path.join(config.outDir, str(idx),
-                                           'completed/{:04d}.png'.format(i))
-                    save_images(completeed, [batch_sqrt, batch_sqrt], imgName)
-
     def discriminator(self, image, y=None, reuse=False):
         if reuse:
             tf.get_variable_scope().reuse_variables()
 
-        if not self.y_dim:
-            h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv'))
-            h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim * 2, name='d_h1_conv')))
-            h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim * 4, name='d_h2_conv')))
-            h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim * 8, name='d_h3_conv')))
-            h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h3_lin')
+        h0 = lrelu(conv2d(image, self.df_dim, name='d_h0_conv'))
+        h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim * 2, name='d_h1_conv')))
+        h2 = lrelu(self.d_bn2(conv2d(h1, self.df_dim * 4, name='d_h2_conv')))
+        h3 = lrelu(self.d_bn3(conv2d(h2, self.df_dim * 8, name='d_h3_conv')))
+        h4 = linear(tf.reshape(h3, [self.batch_size, -1]), 1, 'd_h3_lin')
 
-            return tf.nn.sigmoid(h4), h4
-        else:
-            yb = tf.reshape(y, [self.batch_size, 1, 1, self.y_dim])
-            x = conv_cond_concat(image, yb)
-
-            h0 = lrelu(conv2d(x, self.c_dim + self.y_dim, name='d_h0_conv'))
-            h0 = conv_cond_concat(h0, yb)
-
-            h1 = lrelu(self.d_bn1(conv2d(h0, self.df_dim + self.y_dim, name='d_h1_conv')))
-            h1 = tf.reshape(h1, [self.batch_size, -1])
-            h1 = tf.concat(1, [h1, y])
-
-            h2 = lrelu(self.d_bn2(linear(h1, self.dfc_dim, 'd_h2_lin')))
-            h2 = tf.concat(1, [h2, y])
-
-            h3 = linear(h2, 1, 'd_h3_lin')
-
-            return tf.nn.sigmoid(h3), h3
+        return tf.nn.sigmoid(h4), h4
 
     def generator(self, z, y=None):
         if not self.y_dim:
