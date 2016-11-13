@@ -56,7 +56,9 @@ def crop_images(dataset_dir, is_mask=False):
                           img[0:192, :])
         #break
 
-crop_images('/mnt/data/andy/dataset/CITYSCAPES/gtFine_trainvaltest/gtFine/train', is_mask=False)
+filePath = '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_label/aachen_000004_000019_gtFine_labelIds.png'
+img = scipy.misc.imread(filePath).astype(np.uint8)
+
 
 """
 crop_images_same_dir('/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom')

@@ -671,7 +671,6 @@ class Discriminator(object):
                 batch_false = [get_image_without_crop(batch_file_false) for batch_file_false in batch_files_false]
                 batch_images_false = np.array(batch_false).astype(np.float32)[:, :, :, 0:3]
 
-                # TODO How many D and G?
                 # Update D network
                 for i in range(0, 3):
                     _, summary_str = self.sess.run(
