@@ -29,7 +29,7 @@ crop_images('/mnt/data/andy/dataset/CITYSCAPES/gtFine_trainvaltest/gtFine/train'
 def crop_images(dataset_dir, is_mask=False):
     data = []
     for folder in os.listdir(dataset_dir):
-        path = os.path.join(dataset_dir, folder, "*_labelIds.png")
+        path = os.path.join(dataset_dir, folder, "*_color.png")
         data.extend(glob(path))
 
     for index, filePath in enumerate(data):
@@ -52,12 +52,11 @@ def crop_images(dataset_dir, is_mask=False):
 
         #scipy.misc.imsave('/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random/' + filePath.split('/')[-1],
         #                  img[offs_h[index]:offs_h_end[index], offs_w[index]:offs_w_end[index] :])
-        scipy.misc.imsave('/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_label/' + filePath.split('/')[-1],
+        scipy.misc.imsave('/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_color/' + filePath.split('/')[-1],
                           img[0:192, :])
         #break
 
-filePath = '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_label/aachen_000004_000019_gtFine_labelIds.png'
-img = scipy.misc.imread(filePath).astype(np.uint8)
+crop_images('/mnt/data/andy/dataset/CITYSCAPES/gtFine_trainvaltest/gtFine/train', is_mask=False)
 
 
 """

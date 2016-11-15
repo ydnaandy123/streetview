@@ -558,9 +558,8 @@ class DCGAN(object):
 
 class Discriminator(object):
     def __init__(self, sess,
-                 batch_size=64, output_size_h=256, output_size_w=512, lam=0.1,
-                 z_dim=100, gf_dim=128, df_dim=64, gfc_dim=1024, dfc_dim=1024,
-                 y_dim=None, c_dim=3, image_size=256, output_size=256, is_crop=False,
+                 batch_size=64, output_size_h=256, output_size_w=512,
+                 df_dim=64, y_dim=None, c_dim=3,
                  dataset_name='default', checkpoint_dir=None, dataset_dir=None):
         # The origin paper gf_dim should be 128
         """
@@ -670,6 +669,8 @@ class Discriminator(object):
 
                 batch_files_false = data_false[idx * config.batch_size:(idx + 1) * config.batch_size]
                 batch_false = [get_image_without_crop(batch_file_false) for batch_file_false in batch_files_false]
+
+                #batch_false = [np.expand_dims(get_image_without_crop(batch_file_false), axis=3) for batch_file_false in batch_files_false]
                 batch_images_false = np.array(batch_false).astype(np.float32)[:, :, :, 0:3]
 
                 # Update D network
@@ -706,15 +707,18 @@ class Discriminator(object):
                 if np.mod(counter, 500) == 2:
                     self.save(config.checkpoint_dir, counter)
 
-    def test(self, config):
+    def test(self, config, syn_dir):
         data = glob(os.path.join(config.dataset_dir, "*.png"))
+        data_false = glob(os.path.join(syn_dir, "*.png"))
 
         sample_files = data[0:self.sample_size]
         sample = [get_image_without_crop(sample_file) for sample_file in sample_files]
         sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
 
-        sample_z = np.random.uniform(-1, 1, size=(self.sample_size, self.z_dim))
-        print(sample_z)
+        sample_files_false = data_false[0:self.sample_size]
+        sample_false = [get_image_without_crop(sample_file_false) for sample_file_false in sample_files_false]
+        sample_images_false = np.array(sample_false).astype(np.float32)[:, :, :, 0:3]
+
 
         tf.initialize_all_variables().run()
 
@@ -723,19 +727,25 @@ class Discriminator(object):
         else:
             print(" [!] Load failed...")
 
-        samples, d_loss, g_loss = self.sess.run(
-            [self.sampler, self.d_loss, self.g_loss],
-            feed_dict={self.z: sample_z, self.images: sample_images}
-        )
+#        yo_, yo = self.discriminator(sample_images_false)
 
-        store_dir = './test/'
+        _yo, summary_str = self.sess.run(
+            [self.discriminator], feed_dict={self.images: sample_images_false})
+
+        print(_yo, summary_str)
+        #samples, d_loss, g_loss = self.sess.run(
+        #    [self.sampler, self.d_loss, self.g_loss],
+        #    feed_dict={self.z: sample_z, self.images: sample_images}
+        #)
+
+        store_dir = './test_ssyn/'
         if not os.path.exists(store_dir):
             os.makedirs(store_dir)
 
-        batch_sqrt = np.ceil(np.sqrt(config.batch_size))
-        save_images(samples, [batch_sqrt, batch_sqrt], os.path.join(
-            store_dir, '{}_{:d}_{:d}_{:d}.png'.format(config.dataset, config.batch_size, config.output_size_h,
-                                                      config.output_size_w)))
+        #batch_sqrt = np.ceil(np.sqrt(config.batch_size))
+        #save_images(samples, [batch_sqrt, batch_sqrt], os.path.join(
+        #    store_dir, '{}_{:d}_{:d}_{:d}.png'.format(config.dataset, config.batch_size, config.output_size_h,
+        #                                              config.output_size_w)))
 
     def discriminator(self, image, y=None, reuse=False):
         if reuse:
@@ -803,91 +813,6 @@ class Discriminator(object):
 
             return tf.nn.sigmoid(deconv2d(h2, [self.batch_size, s, s, self.c_dim], name='g_h3'))
 
-    def sampler(self, z, y=None):
-        tf.get_variable_scope().reuse_variables()
-
-        if not self.y_dim:
-
-            s, sh, sw = self.output_size, self.output_size_h, self.output_size_w
-            s2, s4, s8, s16 = int(s / 2), int(s / 4), int(s / 8), int(s / 16)
-
-            s2_h, s4_h, s8_h, s16_h = int(sh / 2), int(sh / 4), int(sh / 8), int(sh / 16)
-            s2_w, s4_w, s8_w, s16_w = int(sw / 2), int(sw / 4), int(sw / 8), int(sw / 16)
-
-            # project `z` and reshape
-            h0 = tf.reshape(linear(z, self.gf_dim * 8 * s16_h * s16_w, 'g_h0_lin'),
-                            [-1, s16_h, s16_w, self.gf_dim * 8])
-            h0 = tf.nn.relu(self.g_bn0(h0, train=False))
-
-            h1 = deconv2d(h0, [self.batch_size, s8_h, s8_w, self.gf_dim * 4], name='g_h1')
-            h1 = tf.nn.relu(self.g_bn1(h1, train=False))
-
-            h2 = deconv2d(h1, [self.batch_size, s4_h, s4_w, self.gf_dim * 2], name='g_h2')
-            h2 = tf.nn.relu(self.g_bn2(h2, train=False))
-
-            h3 = deconv2d(h2, [self.batch_size, s2_h, s2_w, self.gf_dim * 1], name='g_h3')
-            h3 = tf.nn.relu(self.g_bn3(h3, train=False))
-
-            h4 = deconv2d(h3, [self.batch_size, sh, sw, self.c_dim], name='g_h4')
-
-            return tf.nn.tanh(h4)
-        else:
-            s = self.output_size
-            s2, s4 = int(s / 2), int(s / 4)
-
-            # yb = tf.reshape(y, [-1, 1, 1, self.y_dim])
-            yb = tf.reshape(y, [self.batch_size, 1, 1, self.y_dim])
-            z = tf.concat(1, [z, y])
-
-            h0 = tf.nn.relu(self.g_bn0(linear(z, self.gfc_dim, 'g_h0_lin')))
-            h0 = tf.concat(1, [h0, y])
-
-            h1 = tf.nn.relu(self.g_bn1(linear(z, self.gf_dim * 2 * s4 * s4, 'g_h1_lin'), train=False))
-            h1 = tf.reshape(h1, [self.batch_size, s4, s4, self.gf_dim * 2])
-            h1 = conv_cond_concat(h1, yb)
-
-            h2 = tf.nn.relu(
-                self.g_bn2(deconv2d(h1, [self.batch_size, s2, s2, self.gf_dim * 2], name='g_h2'), train=False))
-            h2 = conv_cond_concat(h2, yb)
-
-            return tf.nn.sigmoid(deconv2d(h2, [self.batch_size, s, s, self.c_dim], name='g_h3'))
-
-    def load_mnist(self):
-        data_dir = os.path.join("./data", self.dataset_name)
-
-        fd = open(os.path.join(data_dir, 'train-images-idx3-ubyte'))
-        loaded = np.fromfile(file=fd, dtype=np.uint8)
-        trX = loaded[16:].reshape((60000, 28, 28, 1)).astype(np.float)
-
-        fd = open(os.path.join(data_dir, 'train-labels-idx1-ubyte'))
-        loaded = np.fromfile(file=fd, dtype=np.uint8)
-        trY = loaded[8:].reshape((60000)).astype(np.float)
-
-        fd = open(os.path.join(data_dir, 't10k-images-idx3-ubyte'))
-        loaded = np.fromfile(file=fd, dtype=np.uint8)
-        teX = loaded[16:].reshape((10000, 28, 28, 1)).astype(np.float)
-
-        fd = open(os.path.join(data_dir, 't10k-labels-idx1-ubyte'))
-        loaded = np.fromfile(file=fd, dtype=np.uint8)
-        teY = loaded[8:].reshape((10000)).astype(np.float)
-
-        trY = np.asarray(trY)
-        teY = np.asarray(teY)
-
-        X = np.concatenate((trX, teX), axis=0)
-        y = np.concatenate((trY, teY), axis=0)
-
-        seed = 547
-        np.random.seed(seed)
-        np.random.shuffle(X)
-        np.random.seed(seed)
-        np.random.shuffle(y)
-
-        y_vec = np.zeros((len(y), self.y_dim), dtype=np.float)
-        for i, label in enumerate(y):
-            y_vec[i, y[i]] = 1.0
-
-        return X / 255., y_vec
 
     def save(self, checkpoint_dir, step):
         model_name = "DCGAN.model"
