@@ -59,7 +59,7 @@ def main(_):
         if FLAGS.dataset == 'cityscapes':
             print('Select CITYSCAPES')
             mask_dir = CITYSCAPES_mask_dir
-            syn_dir = CITYSCAPES_syn_dir
+            syn_dir = CITYSCAPES_syn_dir_2
             FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 192, 512, False
             FLAGS.dataset_dir = CITYSCAPES_dir
         elif FLAGS.dataset == 'inria':
@@ -75,7 +75,6 @@ def main(_):
             discriminator.test(FLAGS, syn_dir)
         elif FLAGS.mode == 'train':
             print('Train!')
-            # TODO verify
             discriminator.train(FLAGS, syn_dir)
         elif FLAGS.mode == 'complete':
             print('Complete!')

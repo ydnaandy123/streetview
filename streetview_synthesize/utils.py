@@ -15,16 +15,12 @@ pp = pprint.PrettyPrinter()
 get_stddev = lambda x, k_h, k_w: 1/math.sqrt(k_w*k_h*x.get_shape()[-1])
 
 
-def eval_image(image):
-    image[:, :, 0] = 1
-    return image
-
-
 def get_batch_images(data_list, idx, batch_size, is_grayscale=False):
     batch_files = data_list[idx * batch_size:(idx + 1) * batch_size]
     batch = [read_image(batch_file, is_grayscale=is_grayscale) for batch_file in batch_files]
     batch_images = np.array(batch).astype(np.float32)
     return batch_images
+
 
 def read_image(path, is_grayscale=False, need_augment=False):
     if is_grayscale:

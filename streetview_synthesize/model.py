@@ -74,7 +74,7 @@ class Discriminator(object):
             .minimize(self.d_loss, var_list=self.d_vars)
         tf.initialize_all_variables().run()
 
-        counter = 1
+        counter = 0
         start_time = time.time()
 
         if self.load(self.checkpoint_dir):
@@ -99,7 +99,7 @@ class Discriminator(object):
                 print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_fake_loss: %.8f, d_real_loss: %.8f" \
                       % (epoch, idx, batch_idxs,
                          time.time() - start_time, errD_fake, errD_real))
-                if np.mod(counter, 10) == 1:
+                if np.mod(counter, 100) == 0:
                     store_dir = './samples_syn/'
                     feed_dict = {
                         self.images: batch_images,
@@ -157,15 +157,14 @@ class Discriminator(object):
             self.images: batch_images,
         }
         D = self.sess.run([self.D], feed_dict=feed_dict)
-        #print(errD_fake, errD_real)
-        print(D)
+        D = np.array(D).reshape(-1)
 
         save_images(batch_images, [batch_sqrt, batch_sqrt], os.path.join(
             store_dir, '{}_{:d}_{:d}_{:d}_test.png'.format(config.dataset, config.batch_size, config.output_size_h,
                                                       config.output_size_w)))
 
         threshold = 0.5
-        false_ids = np.nonzero((np.array(D) < threshold))
+        false_ids = np.nonzero(D < threshold)
         batch_images[false_ids, :, :, 0] = 1
         test_images = batch_images
         save_images(test_images, [batch_sqrt, batch_sqrt], os.path.join(
