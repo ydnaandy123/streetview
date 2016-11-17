@@ -34,7 +34,6 @@ flags.DEFINE_string("dataset_dir", "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES
 flags.DEFINE_string("sample_dir", "samples_syn", "Directory name to save the image samples [samples]")
 FLAGS = flags.FLAGS
 
-# TODO Fully cityscape dataset and hacker
 
 CITYSCAPES_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom"
 CITYSCAPES_mask_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_mask"
@@ -84,7 +83,6 @@ def main(_):
             discriminator.test(FLAGS, syn_dir)
         elif FLAGS.mode == 'train':
             print('Train!')
-            # TODO verify
             discriminator.train(FLAGS, syn_dir)
         elif FLAGS.mode == 'complete':
             print('Complete!')

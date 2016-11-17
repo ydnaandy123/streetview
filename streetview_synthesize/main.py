@@ -43,7 +43,7 @@ flags.DEFINE_string("sample_dir", "samples_syn", "Directory name to save the ima
 
 CITYSCAPES_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom"
 CITYSCAPES_mask_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_mask"
-CITYSCAPES_syn_dir = '/mnt/data/andy/dataset/StreetView_synthesize'
+CITYSCAPES_syn_dir = '/mnt/data/andy/dataset/StreetView_synthesize_ped'
 CITYSCAPES_syn_dir_2 = '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_color'
 INRIA_dir = "/mnt/data/andy/dataset/INRIAPerson/96X160H96/Train/pos"
 
@@ -59,7 +59,7 @@ def main(_):
         if FLAGS.dataset == 'cityscapes':
             print('Select CITYSCAPES')
             mask_dir = CITYSCAPES_mask_dir
-            syn_dir = CITYSCAPES_syn_dir_2
+            syn_dir = CITYSCAPES_syn_dir
             FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 192, 512, False
             FLAGS.dataset_dir = CITYSCAPES_dir
         elif FLAGS.dataset == 'inria':

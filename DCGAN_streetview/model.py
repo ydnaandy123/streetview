@@ -577,7 +577,6 @@ class Discriminator(object):
             c_dim: (optional) Dimension of image color. For grayscale input, set to 1. [3]
             is_crop: True if images need extra process to crop them.
         """
-        # TODO Can sample_size different from batch_size?
         # http://stackoverflow.com/questions/35289773/cannot-convert-a-partially-converted-tensor-in-tensorflow
         self.sess = sess
         self.batch_size = batch_size
