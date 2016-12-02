@@ -47,3 +47,6 @@ Automatically generate and complete the streetview
 ## Some thoughts
 - If we can complete the missing part of a image, can we combine one generator(pedestrian) with another discriminator(streetview)?
 ![ques](/src/ques.PNG)
+
+## FCN
+- [Cityscapes labels](https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/helpers/labels.py#L26)
