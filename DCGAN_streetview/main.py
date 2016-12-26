@@ -22,7 +22,7 @@ flags.DEFINE_integer("output_size_w", 512, "The size of the output images to pro
 flags.DEFINE_float("lam", 0.01, "hyper-parameter that controls how import two loss [0.1]")
 flags.DEFINE_string("outDir", "completions", "Directory name to save the output [completions]")
 flags.DEFINE_string("maskType", "mask", "type of mask [center]")
-flags.DEFINE_integer("nIter", 6000, "The number of iteration [1000]")
+flags.DEFINE_integer("nIter", 1000, "The number of iteration [1000]")
 flags.DEFINE_float("lr", 0.01, "WTF [0.01]")
 flags.DEFINE_float("momentum", 0.9, "WTF [0.9]")
 # TODO lr and momentum
@@ -47,7 +47,9 @@ FLAGS = flags.FLAGS
 CITYSCAPES_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom"
 CITYSCAPES_mask_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_mask"
 INRIA_dir = "/mnt/data/andy/dataset/INRIAPerson/96X160H96/Train/pos"
-
+indoor_dir = '/mnt/data/andy/dataset/indoor_my'
+indoor_bedroom_dir = '/mnt/data/andy/dataset/indoor/bedroom'
+indoor_dining_dir = '/mnt/data/andy/dataset/indoor/dining_room'
 
 # TODO:  -GAN-improved - VAE - step-by-step GAN
 # TODO: Specific generative model?
@@ -60,7 +62,7 @@ def main(_):
         os.makedirs(FLAGS.sample_dir)
 
     # Do not take all memory
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.40)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.80)
     # sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
@@ -80,6 +82,18 @@ def main(_):
                 print 'Select INRIAPerson'
                 FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 160, 96, False
                 FLAGS.dataset_dir = INRIA_dir
+            elif FLAGS.dataset == 'indoor':
+                print 'Select indoor'
+                FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 256, 256, False
+                FLAGS.dataset_dir = indoor_dir
+            elif FLAGS.dataset == 'indoor_bedroom':
+                print 'Select indoor bedroom'
+                FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 256, 256, False
+                FLAGS.dataset_dir = indoor_bedroom_dir
+            elif FLAGS.dataset == 'indoor_dining':
+                print 'Select indoor dining'
+                FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 256, 256, False
+                FLAGS.dataset_dir = indoor_bedroom_dir
 
             dcgan = DCGAN(sess, batch_size=FLAGS.batch_size, output_size_h=FLAGS.output_size_h, output_size_w=FLAGS.output_size_w, c_dim=FLAGS.c_dim,
                           dataset_name=FLAGS.dataset, is_crop=FLAGS.is_crop,

@@ -144,12 +144,13 @@ class DCGAN(object):
             batch_idxs = min(len(data_X), config.train_size) // config.batch_size
 
         else:
-            data = glob(os.path.join(config.dataset_dir, "*.png"))
+            data = glob(os.path.join(config.dataset_dir, "*.jpg"))
             batch_idxs = min(len(data), config.train_size) // config.batch_size
 
             sample_files = data[0:self.sample_size]
             sample = [get_image_without_crop(sample_file) for sample_file in sample_files]
-            sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
+            #sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
+            sample_images = np.array(sample).astype(np.float32)
 
         sample_z = np.random.uniform(-1, 1, size=(self.sample_size, self.z_dim))
         batch_sqrt = np.ceil(np.sqrt(config.batch_size))
@@ -249,11 +250,12 @@ class DCGAN(object):
                     self.save(config.checkpoint_dir, counter)
 
     def test(self, config):
-        data = glob(os.path.join(config.dataset_dir, "*.png"))
+        data = glob(os.path.join(config.dataset_dir, "*.jpg"))
 
         sample_files = data[0:self.sample_size]
         sample = [get_image_without_crop(sample_file) for sample_file in sample_files]
-        sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
+        #sample_images = np.array(sample).astype(np.float32)[:, :, :, 0:3]
+        sample_images = np.array(sample).astype(np.float32)[:, :, :]
 
         sample_z = np.random.uniform(-1, 1, size=(self.sample_size, self.z_dim))
         print(sample_z)
@@ -288,7 +290,12 @@ class DCGAN(object):
         is_loaded = self.load(self.checkpoint_dir)
         assert is_loaded
 
-        data = sorted(glob(os.path.join(config.dataset_dir, "*.png")))
+        #data = sorted(glob(os.path.join(config.dataset_dir, "*.png")))
+        data = sorted(glob(os.path.join('/mnt/data/andy/dataset/CITYSCAPES/ori', "*.png")))
+        #data = ['/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/aachen_000014_000019_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/aachen_000014_000019_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/aachen_000014_000019_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/aachen_000014_000019_gtFine_labelIds.png',
+        #        '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/hanover_000000_043822_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/hanover_000000_043822_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/hanover_000000_043822_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/hanover_000000_043822_gtFine_labelIds.png',
+        #        '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/strasbourg_000000_015602_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/strasbourg_000000_015602_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/strasbourg_000000_015602_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/strasbourg_000000_015602_gtFine_labelIds.png',
+        #        '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/zurich_000002_000019_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/zurich_000002_000019_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/zurich_000002_000019_gtFine_labelIds.png', '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom/zurich_000002_000019_gtFine_labelIds.png']
         batch_idxs = min(len(data), config.train_size) // config.batch_size
 
         for idx in xrange(0, batch_idxs):
@@ -299,7 +306,7 @@ class DCGAN(object):
 
             batch_files = data[idx * config.batch_size:(idx + 1) * config.batch_size]
             batch = [get_image_without_crop(batch_file) for batch_file in batch_files]
-            batch_images = np.array(batch).astype(np.float32)[:, :, :, 0:3]
+            batch_images = np.array(batch).astype(np.float32)[:, 0:192, :, 0:3]
 
             if config.maskType == 'random':
                 fraction_masked = 0.2
@@ -316,11 +323,12 @@ class DCGAN(object):
                 mask[d:u, l:r, :] = 0.0
                 batch_masks = np.resize(mask, [self.batch_size] + self.image_shape)
             elif config.maskType == 'mask':
-                mask = sorted(glob(os.path.join(mask_dir, "*.png")))
+                #mask = sorted(glob(os.path.join(mask_dir, "*.png")))
+                mask = sorted(glob(os.path.join('/mnt/data/andy/dataset/CITYSCAPES/mask', "*.png")))
                 batch_mask_files = mask[idx * config.batch_size:(idx + 1) * config.batch_size]
                 batch_m = [get_image_without_crop(batch_mask, need_augment=True)
                            for batch_mask in batch_mask_files]
-                batch_masks = np.array(batch_m).astype(np.float32)[:, :, :, 0:3]
+                batch_masks = 1 - np.array(batch_m).astype(np.float32)[:, 0:192, :, 0:3]
             else:
                 assert False
 
@@ -686,7 +694,7 @@ class Discriminator(object):
                 print("Epoch: [%2d] [%4d/%4d] time: %4.4f, d_fake_loss: %.8f, d_real_loss: %.8f" \
                       % (epoch, idx, batch_idxs,
                          time.time() - start_time, errD_fake, errD_real))
-                '''
+
                 if np.mod(counter, 100) == 1:
                     if config.dataset == 'mnist':
                         samples, d_loss, g_loss = self.sess.run(
@@ -701,7 +709,7 @@ class Discriminator(object):
                     save_images(samples, [batch_sqrt, batch_sqrt],
                                 './samples/train_{:02d}_{:04d}.png'.format(epoch, idx))
                     print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss))
-                '''
+
 
                 if np.mod(counter, 500) == 2:
                     self.save(config.checkpoint_dir, counter)

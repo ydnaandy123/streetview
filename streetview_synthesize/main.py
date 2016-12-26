@@ -19,11 +19,11 @@ flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_integer("train_size", np.inf, "The size of train images [np.inf]")
 flags.DEFINE_integer("c_dim", 3, "Dimension of image color. [3]")
 
-flags.DEFINE_string("mode", "test", "type of mode [test, train, evaluate, complete]")
-flags.DEFINE_string("dataset", "cityscapes", "The name of dataset [cityscapes, inria]")
+flags.DEFINE_string("mode", "train", "type of mode [test, train, evaluate, complete]")
+flags.DEFINE_string("dataset", "indoor", "The name of dataset [cityscapes, inria, indoor]")
 flags.DEFINE_integer("batch_size", 16, "The size of batch images [16]")
-flags.DEFINE_integer("output_size_h", 192, "The size of the output images to produce [192]")
-flags.DEFINE_integer("output_size_w", 512, "The size of the output images to produce [512]")
+flags.DEFINE_integer("output_size_h", 256, "The size of the output images to produce [192]")
+flags.DEFINE_integer("output_size_w", 256, "The size of the output images to produce [512]")
 
 # completion
 flags.DEFINE_float("lam", 0.1, "hyper-parameter that controls how import two loss [0.1]")
@@ -46,6 +46,7 @@ CITYSCAPES_mask_dir = "/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_
 CITYSCAPES_syn_dir = '/mnt/data/andy/dataset/StreetView_synthesize_ped'
 CITYSCAPES_syn_dir_2 = '/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_color'
 INRIA_dir = "/mnt/data/andy/dataset/INRIAPerson/96X160H96/Train/pos"
+indoor_dir = '/mnt/data/andy/dataset/indoor'
 
 def main(_):
     if not os.path.exists(FLAGS.checkpoint_dir):
@@ -54,7 +55,7 @@ def main(_):
         os.makedirs(FLAGS.sample_dir)
 
     # Do not take all memory
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.40)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.80)
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
         if FLAGS.dataset == 'cityscapes':
             print('Select CITYSCAPES')
@@ -66,6 +67,11 @@ def main(_):
             print('Select INRIAPerson')
             FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 160, 96, False
             FLAGS.dataset_dir = INRIA_dir
+        elif FLAGS.dataset == 'indoor':
+            print('Select indoor')
+            syn_dir = CITYSCAPES_syn_dir
+            FLAGS.output_size_h, FLAGS.output_size_w, FLAGS.is_crop = 256, 256, False
+            FLAGS.dataset_dir = indoor_dir
 
         discriminator = Discriminator(sess, batch_size=FLAGS.batch_size, output_size_h=FLAGS.output_size_h, output_size_w=FLAGS.output_size_w, c_dim=FLAGS.c_dim,
                       dataset_name=FLAGS.dataset, checkpoint_dir=FLAGS.checkpoint_dir, dataset_dir=FLAGS.dataset_dir)

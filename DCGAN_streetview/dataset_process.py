@@ -20,8 +20,14 @@ def store_single(filename, height , width, col_num, sel):
     name, extension = filename.split('.')
     col, row = sel % col_num, sel / col_num
     sel_image = img[row*height:(row+1)*height, col*width:(col+1)*width, :]
-    scipy.misc.imsave(name + '_single.' + extension, sel_image)
+    scipy.misc.imsave(name + '_' + str(sel) + '.' + extension, sel_image)
 
+
+
+filename = '/home/andy/Github/streetview/DCGAN_streetview/completions/0800.png'
+height , width, col_num = 192, 512, 4
+sel = 12
+store_single(filename, height , width, col_num, sel)
 
 """
 crop_images('/mnt/data/andy/dataset/CITYSCAPES/gtFine_trainvaltest/gtFine/train', is_mask=True)
@@ -29,14 +35,14 @@ crop_images('/mnt/data/andy/dataset/CITYSCAPES/gtFine_trainvaltest/gtFine/train'
 def crop_images(dataset_dir, is_mask=False):
     data = []
     for folder in os.listdir(dataset_dir):
-        path = os.path.join(dataset_dir, folder, "*_color.png")
+        path = os.path.join(dataset_dir, folder, "*.jpg")
         data.extend(glob(path))
 
     for index, filePath in enumerate(data):
         print ('{}/{}'.format(index, len(data)))
 
         img = scipy.misc.imread(filePath).astype(np.uint8)
-        img = scipy.misc.imresize(img, 0.25, interp='bilinear', mode=None)
+        #img = scipy.misc.imresize(img, 0.25, interp='bilinear', mode=None)
         if is_mask:
             mask = np.ones((img.shape[0], img.shape[1]), dtype=np.uint8) * 255
 
@@ -52,11 +58,10 @@ def crop_images(dataset_dir, is_mask=False):
 
         #scipy.misc.imsave('/home/andy/dataset/CITYSCAPES/CITYSCAPES_crop_random/' + filePath.split('/')[-1],
         #                  img[offs_h[index]:offs_h_end[index], offs_w[index]:offs_w_end[index] :])
-        scipy.misc.imsave('/mnt/data/andy/dataset/CITYSCAPES/CITYSCAPES_crop_bottom_color/' + filePath.split('/')[-1],
-                          img[0:192, :])
+        scipy.misc.imsave('/mnt/data/andy/dataset/indoor_my/{}_{}'.format(filePath.split('/')[-2], filePath.split('/')[-1]),
+                          img)
         #break
 
-crop_images('/mnt/data/andy/dataset/CITYSCAPES/gtFine_trainvaltest/gtFine/train', is_mask=False)
 
 
 """

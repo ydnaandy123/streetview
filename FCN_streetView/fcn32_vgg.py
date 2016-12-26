@@ -10,6 +10,9 @@ import sys
 import numpy as np
 import tensorflow as tf
 
+import TensorflowUtils as utils
+
+
 VGG_MEAN = [103.939, 116.779, 123.68]
 
 
@@ -93,14 +96,15 @@ class FCN32VGG:
         self.conv5_3 = self._conv_layer(self.conv5_2, "conv5_3")
         self.pool5 = self._max_pool(self.conv5_3, 'pool5', debug)
 
-        self.fc6 = self._fc_layer(self.pool5, "fc6")
-
+        # TODO: fc6, fc7, score_layer, keep_prob
+        keep_prob = 0.5
+        self.fc6 = self._fc_layer_my(self.pool5, "fc6")
         if train:
-            self.fc6 = tf.nn.dropout(self.fc6, 0.5)
+            self.fc6= tf.nn.dropout(self.fc6, keep_prob=keep_prob)
 
-        self.fc7 = self._fc_layer(self.fc6, "fc7")
+        self.fc7 = self._fc_layer_my(self.fc6, "fc7")
         if train:
-            self.fc7 = tf.nn.dropout(self.fc7, 0.5)
+            self.fc7 = tf.nn.dropout(self.fc7, keep_prob=keep_prob)
 
         if random_init_fc8:
             self.score_fr = self._score_layer(self.fc7, "score_fr",
@@ -110,7 +114,7 @@ class FCN32VGG:
                                            num_classes=num_classes,
                                            relu=False)
 
-        self.pred = tf.argmax(self.score_fr, dimension=3)
+        self.pred = tf.argmax(self.score_fr, dimension=3, name="prediction1")
 
         self.upscore = self._upscore_layer(self.score_fr, shape=tf.shape(bgr),
                                            num_classes=num_classes,
@@ -148,15 +152,48 @@ class FCN32VGG:
             shape = bottom.get_shape().as_list()
 
             if name == 'fc6':
+                # TODO: more general way to describe
                 filt = self.get_fc_weight_reshape(name, [7, 7, 512, 4096])
+            elif name == 'fc7':
+                filt = self.get_fc_weight_reshape(name, [1, 1, 4096, 4096])
             elif name == 'score_fr':
                 name = 'fc8'  # Name of score_fr layer in VGG Model
                 filt = self.get_fc_weight_reshape(name, [1, 1, 4096, 1000],
                                                   num_classes=num_classes)
-            else:
-                filt = self.get_fc_weight_reshape(name, [1, 1, 4096, 4096])
             conv = tf.nn.conv2d(bottom, filt, [1, 1, 1, 1], padding='SAME')
             conv_biases = self.get_bias(name, num_classes=num_classes)
+            bias = tf.nn.bias_add(conv, conv_biases)
+
+            if relu:
+                bias = tf.nn.relu(bias)
+            _activation_summary(bias)
+
+            if debug:
+                bias = tf.Print(bias, [tf.shape(bias)],
+                                message='Shape of %s' % name,
+                                summarize=4, first_n=1)
+            return bias
+
+    def _fc_layer_my(self, bottom, name, num_classes=None,
+                  relu=True, debug=False):
+        with tf.variable_scope(name) as scope:
+            if name == 'fc6':
+                # TODO: more general way to describe
+                #filt = self.get_fc_weight_reshape(name, [6, 16, 512, 4096])
+                shape = [6, 16, 512, 4096]
+            elif name == 'fc7':
+                #filt = self.get_fc_weight_reshape(name, [1, 1, 4096, 4096])
+                shape = [1, 1, 4096, 4096]
+
+            in_features = bottom.get_shape()[3].value
+            num_input = in_features
+            stddev = (2 / num_input)**0.5
+            # Apply convolution
+            w_decay = self.wd
+            weights = self._variable_with_weight_decay(shape, stddev, w_decay)
+            conv = tf.nn.conv2d(bottom, weights, [1, 1, 1, 1], padding='SAME')
+            # Apply bias
+            conv_biases = self._bias_variable([4096], constant=0.0)
             bias = tf.nn.bias_add(conv, conv_biases)
 
             if relu:
